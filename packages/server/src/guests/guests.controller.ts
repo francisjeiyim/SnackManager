@@ -1,5 +1,11 @@
 import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
-import { schemas, UserRole, type MoveGuestInput, type SeatInInput } from "@snackmanager/shared";
+import {
+  schemas,
+  UserRole,
+  type GuestPatchInput,
+  type MoveGuestInput,
+  type SeatInInput,
+} from "@snackmanager/shared";
 import { ZodBody } from "../common/zod-validation.pipe";
 import { CurrentUser, Roles, type AuthUser } from "../common/decorators";
 import { GuestsService } from "./guests.service";
@@ -35,5 +41,14 @@ export class GuestsController {
   @Post(":id/seat-out")
   seatOut(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.guests.seatOut(id, user?.id);
+  }
+
+  @Patch(":id")
+  rename(
+    @Param("id") id: string,
+    @Body(new ZodBody(schemas.guestPatchSchema)) dto: GuestPatchInput,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.guests.rename(id, dto.displayName, user?.id);
   }
 }

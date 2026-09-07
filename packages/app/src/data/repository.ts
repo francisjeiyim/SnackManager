@@ -105,9 +105,15 @@ export interface SnackRepository {
   seatIn(input: SeatInInput): Promise<SeatInResult>;
   moveGuest(guestId: string, toSeatId: string): Promise<Guest>;
   seatOutGuest(guestId: string): Promise<Guest>;
+  renameGuest(guestId: string, displayName: string | null): Promise<Guest>;
 
   liveTickets(): Promise<TicketView[]>;
-  listTickets(params?: { status?: string; serviceDay?: string }): Promise<TicketView[]>;
+  listTickets(params?: {
+    status?: string;
+    serviceDay?: string;
+    from?: string;
+    to?: string;
+  }): Promise<TicketView[]>;
   getTicket(id: string): Promise<TicketView>;
   addItem(ticketId: string, body: Omit<AddItemInput, "ticketId">): Promise<TicketView>;
   voidItem(ticketId: string, itemId: string): Promise<TicketView>;

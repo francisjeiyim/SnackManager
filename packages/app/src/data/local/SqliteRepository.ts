@@ -472,6 +472,26 @@ export class SqliteRepository implements SnackRepository {
     return updated;
   }
 
+  async renameGuest(guestId: string, displayName: string | null) {
+    const db = await this.ready;
+    const existing = db.get<{ id: string; ticketId: string | null }>(
+      `SELECT "id","ticketId" FROM "Guest" WHERE "id"=?`,
+      [guestId],
+    );
+    if (!existing) throw new BillingError("guest not found", "NOT_FOUND");
+    db.run(`UPDATE "Guest" SET "displayName"=?,"updatedAt"=? WHERE "id"=?`, [
+      displayName?.trim() || null,
+      nowIso(),
+      guestId,
+    ]);
+    const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
+    this.emit("seat.updated", updated);
+    if (existing.ticketId) {
+      this.emit("ticket.updated", this.present(db, existing.ticketId, await this.settings()));
+    }
+    return updated;
+  }
+
   // --- tickets ---------------------------------------------
 
   async liveTickets() {
@@ -482,7 +502,9 @@ export class SqliteRepository implements SnackRepository {
       .map((r) => this.present(db, r.id, settings));
   }
 
-  async listTickets(params: { status?: string; serviceDay?: string } = {}) {
+  async listTickets(
+    params: { status?: string; serviceDay?: string; from?: string; to?: string } = {},
+  ) {
     const db = await this.ready;
     const settings = await this.settings();
     const where: string[] = [];
@@ -495,10 +517,18 @@ export class SqliteRepository implements SnackRepository {
       where.push(`"serviceDay"=?`);
       bind.push(params.serviceDay);
     }
+    if (params.from) {
+      where.push(`"serviceDay">=?`);
+      bind.push(params.from);
+    }
+    if (params.to) {
+      where.push(`"serviceDay"<=?`);
+      bind.push(params.to);
+    }
     return db
       .all<{ id: string }>(
         `SELECT "id" FROM "Ticket" ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-         ORDER BY "serviceDay" DESC, "number" DESC LIMIT 500`,
+         ORDER BY "serviceDay" DESC, "number" DESC LIMIT 2000`,
         bind,
       )
       .map((r) => this.present(db, r.id, settings));

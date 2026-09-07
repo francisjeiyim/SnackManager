@@ -61,6 +61,7 @@ export function ticket(overrides: Partial<Ticket> = {}): Ticket {
   return {
     id: "t_1",
     number: 1,
+    serviceDay: "2026-09-07",
     status: TicketStatus.OPEN,
     openedAt: T0,
     closedAt: null,

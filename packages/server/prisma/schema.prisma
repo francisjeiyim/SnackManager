@@ -73,9 +73,10 @@ model Settings {
   minChargeMinutes        Int          @default(0)
   timeRounding            TimeRounding @default(CEIL_MINUTE)
   defaultLocale           Locale       @default(ja)
-  serviceDayCutoverHour   Int          @default(5)
-  hourWarningMinutes      Int          @default(10)
-  updatedAt               DateTime     @updatedAt
+  serviceDayCutoverHour     Int          @default(5)
+  hourWarningIntervalMinutes Int         @default(60)
+  hourWarningMinutes        Int          @default(10)
+  updatedAt                 DateTime     @updatedAt
 }
 
 model User {

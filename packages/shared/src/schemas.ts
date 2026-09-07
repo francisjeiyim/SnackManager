@@ -19,9 +19,15 @@ export const settingsUpdateSchema = z.object({
   timeRounding: z.nativeEnum(TimeRounding).optional(),
   defaultLocale: localeSchema.optional(),
   serviceDayCutoverHour: z.number().int().min(0).max(23).optional(),
-  hourWarningMinutes: z.number().int().min(0).max(59).optional(),
+  hourWarningIntervalMinutes: z.number().int().min(0).max(600).optional(),
+  hourWarningMinutes: z.number().int().min(0).max(120).optional(),
 });
 export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;
+
+export const guestPatchSchema = z.object({
+  displayName: z.string().min(1).max(40).nullable(),
+});
+export type GuestPatchInput = z.infer<typeof guestPatchSchema>;
 
 // --- Rooms & seats --------------------------------------------------------
 

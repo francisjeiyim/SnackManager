@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 html,
@@ -12,21 +12,28 @@ body,
   height: 100%;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
 body {
   margin: 0;
+  background: #fffaf5;
+  color: #1c1917;
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN",
     "Noto Sans JP", Meiryo, sans-serif;
 }
 
-/* Board: an occupied seat blinks as it approaches a full hour. */
+/* Board: an occupied seat blinks as it approaches an alert boundary. */
 @keyframes sm-blink {
   0%,
   100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.4;
+    opacity: 0.45;
   }
 }
 .sm-blink {

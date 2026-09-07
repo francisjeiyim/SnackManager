@@ -21,6 +21,7 @@ export function SettingsPage(): JSX.Element {
     graceMinutes: 0,
     minChargeMinutes: 0,
     timeRounding: "CEIL_MINUTE" as TimeRounding,
+    hourWarningIntervalMinutes: 60,
     hourWarningMinutes: 10,
   });
   const [savedFlash, setSavedFlash] = useState(false);
@@ -32,6 +33,7 @@ export function SettingsPage(): JSX.Element {
         graceMinutes: settingsQ.data.graceMinutes,
         minChargeMinutes: settingsQ.data.minChargeMinutes,
         timeRounding: settingsQ.data.timeRounding,
+        hourWarningIntervalMinutes: settingsQ.data.hourWarningIntervalMinutes,
         hourWarningMinutes: settingsQ.data.hourWarningMinutes,
       });
     }
@@ -134,17 +136,35 @@ export function SettingsPage(): JSX.Element {
                   }
                 />
               </Field>
-              <Field label={t("settings.hourWarning")} hint={t("settings.hourWarningHint")}>
+              <Field label={t("settings.alertInterval")} hint={t("settings.alertIntervalHint")}>
                 <Input
                   type="number"
                   min={0}
-                  max={59}
+                  max={600}
+                  disabled={!isAdmin}
+                  value={form.hourWarningIntervalMinutes}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      hourWarningIntervalMinutes: Math.min(
+                        600,
+                        Math.max(0, Number(e.target.value) || 0),
+                      ),
+                    })
+                  }
+                />
+              </Field>
+              <Field label={t("settings.alertLead")} hint={t("settings.alertLeadHint")}>
+                <Input
+                  type="number"
+                  min={0}
+                  max={120}
                   disabled={!isAdmin}
                   value={form.hourWarningMinutes}
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      hourWarningMinutes: Math.min(59, Math.max(0, Number(e.target.value) || 0)),
+                      hourWarningMinutes: Math.min(120, Math.max(0, Number(e.target.value) || 0)),
                     })
                   }
                 />

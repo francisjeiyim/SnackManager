@@ -104,11 +104,16 @@ export class HttpRepository implements SnackRepository {
   seatOutGuest(guestId: string): Promise<Guest> {
     return this.api.request("POST", `/guests/${guestId}/seat-out`);
   }
+  renameGuest(guestId: string, displayName: string | null): Promise<Guest> {
+    return this.api.request("PATCH", `/guests/${guestId}`, { displayName });
+  }
 
   liveTickets(): Promise<TicketView[]> {
     return this.api.request("GET", "/tickets/live");
   }
-  listTickets(params: { status?: string; serviceDay?: string } = {}): Promise<TicketView[]> {
+  listTickets(
+    params: { status?: string; serviceDay?: string; from?: string; to?: string } = {},
+  ): Promise<TicketView[]> {
     return this.api.request("GET", `/tickets${qs(params)}`);
   }
   getTicket(id: string): Promise<TicketView> {

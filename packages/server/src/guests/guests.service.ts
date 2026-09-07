@@ -124,4 +124,30 @@ export class GuestsService {
     }
     return toGuest(updated);
   }
+
+  /** Set (or clear) a guest's display name at any point. */
+  async rename(guestId: string, displayName: string | null, userId?: string) {
+    const guest = await this.prisma.guest
+      .update({
+        where: { id: guestId },
+        data: { displayName: displayName?.trim() || null },
+        include: withSeat,
+      })
+      .catch(() => {
+        throw new NotFoundException("guest not found");
+      });
+
+    await this.audit.record({
+      action: AuditAction.SEAT_IN,
+      entityType: "guest",
+      entityId: guestId,
+      userId,
+      data: { displayName: guest.displayName },
+    });
+    this.events.emitEvent(ServiceEvent.SEAT_UPDATED, toGuest(guest), guest.roomId);
+    if (guest.ticketId) {
+      this.events.emitEvent(ServiceEvent.TICKET_UPDATED, await this.tickets.get(guest.ticketId));
+    }
+    return toGuest(guest);
+  }
 }

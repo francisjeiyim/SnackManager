@@ -35,8 +35,14 @@ export interface Settings {
   /** Hour (0–23, local) at which the "service day" rolls over for ticket numbering. */
   serviceDayCutoverHour: number;
   /**
-   * Minutes before each full hour during which an occupied seat blinks on the
-   * board (e.g. 10 → blink from 50→60 min, 110→120, …). `0` disables it.
+   * The duration-alert interval in minutes (e.g. 60 → alert around each full
+   * hour; 45 → every 45 min). `0` disables the alert.
+   */
+  hourWarningIntervalMinutes: number;
+  /**
+   * How many minutes before each interval boundary an occupied seat starts
+   * blinking on the board (e.g. interval 60 + lead 10 → blink 50→60, 110→120).
+   * `0` disables the alert.
    */
   hourWarningMinutes: number;
   updatedAt: IsoDateTime;
@@ -104,6 +110,7 @@ export interface Product {
 export interface Ticket {
   id: string;
   number: number;
+  serviceDay: string;
   status: TicketStatus;
   openedAt: IsoDateTime;
   closedAt: IsoDateTime | null;

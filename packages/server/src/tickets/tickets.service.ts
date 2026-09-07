@@ -76,16 +76,17 @@ export class TicketsService {
     return tickets.map((t) => this.presentWith(t, settings));
   }
 
-  async list(params: { status?: string; serviceDay?: string }) {
+  async list(params: { status?: string; serviceDay?: string; from?: string; to?: string }) {
+    const range = params.from || params.to ? { gte: params.from, lte: params.to } : undefined;
     const [tickets, settings] = await Promise.all([
       this.prisma.ticket.findMany({
         where: {
           status: params.status ? (params.status as TicketStatus) : undefined,
-          serviceDay: params.serviceDay,
+          serviceDay: params.serviceDay ?? range,
         },
         include: withGraph,
         orderBy: [{ serviceDay: "desc" }, { number: "desc" }],
-        take: 500,
+        take: 2000,
       }),
       this.settings.billing(),
     ]);

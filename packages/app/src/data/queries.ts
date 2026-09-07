@@ -75,6 +75,15 @@ export function useTicketsByDay(serviceDay: string) {
   });
 }
 
+export function useTicketsRange(from: string, to: string) {
+  const repo = useRepository();
+  return useQuery({
+    queryKey: ["tickets", "range", from, to],
+    queryFn: () => repo.listTickets({ from, to }),
+    enabled: !!from && !!to,
+  });
+}
+
 export function useTicket(id: string | null) {
   const repo = useRepository();
   return useQuery({
@@ -168,6 +177,16 @@ export function useMoveGuest() {
   return useMutation({
     mutationFn: (vars: { guestId: string; toSeatId: string }) =>
       repo.moveGuest(vars.guestId, vars.toSeatId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useRenameGuest() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (vars: { guestId: string; displayName: string | null }) =>
+      repo.renameGuest(vars.guestId, vars.displayName),
     onSuccess: invalidate,
   });
 }

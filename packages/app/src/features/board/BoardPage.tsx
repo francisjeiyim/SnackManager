@@ -1,22 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Guest } from "@snackmanager/shared";
-import { Button, Card, Spinner } from "../../components/ui";
+import { elapsedMs } from "@snackmanager/shared";
+import { Button, Card, EmptyState, SegmentedControl, Skeleton } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import { duration, yen } from "../../lib/format";
+import { storedLocale } from "../../i18n";
+import { useNow } from "../../lib/useNow";
 import { usePermissions } from "../../lib/permissions";
 import { useRepository } from "../../data/RepositoryContext";
-import { useActiveGuests, useRooms, useSettings } from "../../data/queries";
+import { useActiveGuests, useLiveTickets, useRooms, useSettings } from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
 import { SeatInDialog } from "./SeatInDialog";
 import { TicketPanel } from "../ticket/TicketPanel";
 
 export function BoardPage(): JSX.Element {
   const { t } = useTranslation();
+  const locale = storedLocale();
+  const now = useNow(5000);
   const repo = useRepository();
   const { canServe } = usePermissions();
   const roomsQ = useRooms();
   const guestsQ = useActiveGuests();
   const settingsQ = useSettings();
+  const liveQ = useLiveTickets();
 
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [seatInSeatId, setSeatInSeatId] = useState<string | null | undefined>(undefined);
@@ -33,63 +40,93 @@ export function BoardPage(): JSX.Element {
   }, [rooms, activeRoomId]);
 
   const room = rooms.find((r) => r.id === activeRoomId) ?? rooms[0];
+  const guests = useMemo(() => guestsQ.data ?? [], [guestsQ.data]);
 
   const guestsBySeat = useMemo(() => {
     const map = new Map<string, Guest[]>();
-    for (const g of guestsQ.data ?? []) {
+    for (const g of guests) {
       const list = map.get(g.seatId) ?? [];
       list.push(g);
       map.set(g.seatId, list);
     }
     return map;
-  }, [guestsQ.data]);
+  }, [guests]);
 
   const occupiedSeatIds = useMemo(() => new Set(guestsBySeat.keys()), [guestsBySeat]);
 
+  const summary = useMemo(() => {
+    const longestMs = guests.reduce(
+      (max, g) => Math.max(max, elapsedMs(new Date(g.arrivalAt), now)),
+      0,
+    );
+    const runningYen = (liveQ.data ?? [])
+      .filter((tk) => tk.status === "OPEN")
+      .reduce((a, tk) => a + tk.live.totalYen, 0);
+    return { tables: guestsBySeat.size, guests: guests.length, longestMs, runningYen };
+  }, [guests, guestsBySeat, liveQ.data, now]);
+
   if (roomsQ.isLoading) {
     return (
-      <div className="flex justify-center p-10">
-        <Spinner className="h-7 w-7" />
+      <div className="space-y-3">
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-[420px] w-full" />
       </div>
     );
   }
   if (rooms.length === 0) {
-    return <Card className="p-6 text-sm text-slate-500">{t("board.noRooms")}</Card>;
+    return (
+      <Card>
+        <EmptyState icon="▢" title={t("board.noRooms")} hint={t("board.noRoomsHint")} />
+      </Card>
+    );
   }
 
   return (
     <div className="flex gap-4">
       <div className="min-w-0 flex-1 space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            {rooms.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => setActiveRoomId(r.id)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium",
-                  r.id === room?.id
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-100",
-                )}
-              >
-                {r.name}
-              </button>
-            ))}
-          </div>
+        {/* summary bar */}
+        <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 text-sm">
+          <Stat label={t("board.tables")} value={String(summary.tables)} />
+          <Stat label={t("board.guestsCount")} value={String(summary.guests)} />
+          <Stat label={t("board.running")} value={yen(summary.runningYen, locale)} />
+          <Stat
+            label={t("board.longest")}
+            value={summary.longestMs ? duration(summary.longestMs) : "—"}
+          />
+        </Card>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {rooms.length > 1 ? (
+            <SegmentedControl
+              value={room?.id ?? ""}
+              onChange={setActiveRoomId}
+              options={rooms.map((r) => ({ value: r.id, label: r.name }))}
+            />
+          ) : (
+            <span className="text-sm font-semibold text-stone-700">{room?.name}</span>
+          )}
           {canServe ? (
             <Button size="sm" className="ml-auto" onClick={() => setSeatInSeatId(null)}>
-              {t("board.seatIn")}
+              + {t("board.seatIn")}
             </Button>
           ) : null}
         </div>
 
+        {/* legend */}
+        <div className="flex flex-wrap gap-3 text-xs text-stone-500">
+          <LegendDot className="border-stone-300 bg-stone-50" label={t("board.free")} />
+          <LegendDot className="border-emerald-500 bg-emerald-50" label={t("board.occupied")} />
+          <LegendDot className="border-amber-500 bg-amber-50" label={t("board.overtime")} />
+          <LegendDot className="border-rose-400 bg-rose-50" label={t("board.alert")} />
+        </div>
+
         {room ? (
-          <div className="overflow-auto">
+          <div className="overflow-auto pb-2">
             <RoomCanvas
               room={room}
               guestsBySeat={guestsBySeat}
-              hourWarningMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
+              alertIntervalMinutes={settingsQ.data?.hourWarningIntervalMinutes ?? 0}
+              alertLeadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
               onSeatClick={(seatId, tId) => {
                 if (tId) setTicketId(tId);
                 else if (canServe) setSeatInSeatId(seatId);
@@ -100,9 +137,20 @@ export function BoardPage(): JSX.Element {
       </div>
 
       {ticketId ? (
-        <div className="w-[360px] shrink-0">
-          <TicketPanel ticketId={ticketId} onClose={() => setTicketId(null)} />
-        </div>
+        <>
+          <div
+            className="fixed inset-0 z-30 bg-stone-900/30 lg:hidden"
+            onClick={() => setTicketId(null)}
+          />
+          <aside
+            className={cn(
+              "z-40 shrink-0 bg-transparent",
+              "fixed inset-y-0 right-0 w-full max-w-md animate-sheet-up p-2 lg:static lg:w-[380px] lg:animate-none lg:p-0",
+            )}
+          >
+            <TicketPanel ticketId={ticketId} onClose={() => setTicketId(null)} />
+          </aside>
+        </>
       ) : null}
 
       {seatInSeatId !== undefined && room ? (
@@ -114,5 +162,23 @@ export function BoardPage(): JSX.Element {
         />
       ) : null}
     </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }): JSX.Element {
+  return (
+    <span className="flex items-baseline gap-1.5">
+      <span className="text-xs text-stone-400">{label}</span>
+      <span className="font-semibold tabular-nums text-stone-800">{value}</span>
+    </span>
+  );
+}
+
+function LegendDot({ className, label }: { className: string; label: string }): JSX.Element {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("h-3 w-3 rounded border-2", className)} />
+      {label}
+    </span>
   );
 }

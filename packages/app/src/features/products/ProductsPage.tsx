@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Product } from "@snackmanager/shared";
-import { Badge, Button, Card, Field, Input, Modal, Spinner } from "../../components/ui";
+import { Badge, Button, Card, Field, Input, Modal, Skeleton } from "../../components/ui";
 import { yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { useProductMutations, useProducts } from "../../data/queries";
@@ -61,8 +61,10 @@ export function ProductsPage(): JSX.Element {
 
       <Card>
         {productsQ.isLoading ? (
-          <div className="flex justify-center p-8">
-            <Spinner />
+          <div className="space-y-2 p-4">
+            {Array.from({ length: 8 }, (_, i) => (
+              <Skeleton key={i} className="h-9 w-full" />
+            ))}
           </div>
         ) : (
           <table className="w-full text-sm">

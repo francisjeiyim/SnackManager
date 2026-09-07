@@ -290,6 +290,40 @@ describe("SnackManager billing flow (e2e)", () => {
     expect(full.body.guests[0].seatLabel).toBe(seats[0].label);
   });
 
+  it("renames a guest at any time", async () => {
+    const { seats } = ctx.seed;
+    const { tickets } = await seatIn([seats[0].id]);
+    const full = await auth(
+      request(app.getHttpServer()).get(`/api/tickets/${tickets[0].id}`),
+    ).expect(200);
+    const guestId = full.body.guests[0].id;
+
+    await auth(
+      request(app.getHttpServer()).patch(`/api/guests/${guestId}`).send({ displayName: "Aïcha" }),
+    ).expect(200);
+
+    const after = await auth(
+      request(app.getHttpServer()).get(`/api/tickets/${tickets[0].id}`),
+    ).expect(200);
+    expect(after.body.guests[0].displayName).toBe("Aïcha");
+  });
+
+  it("filters ticket history by a service-day range", async () => {
+    const { seats } = ctx.seed;
+    await seatIn([seats[0].id]);
+    const today = new Date().toISOString().slice(0, 10);
+
+    const inRange = await auth(
+      request(app.getHttpServer()).get(`/api/tickets?from=${today}&to=${today}`),
+    ).expect(200);
+    expect(inRange.body.length).toBeGreaterThan(0);
+
+    const outOfRange = await auth(
+      request(app.getHttpServer()).get("/api/tickets?from=2000-01-01&to=2000-01-02"),
+    ).expect(200);
+    expect(outOfRange.body).toHaveLength(0);
+  });
+
   it("enforces role permissions (SERVER cannot close)", async () => {
     const { seats } = ctx.seed;
     await ctx.prisma.user.create({

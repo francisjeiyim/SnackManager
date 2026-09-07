@@ -6,14 +6,17 @@ import {
   elapsedMs,
   type BillingSettings,
 } from "@snackmanager/shared";
-import { Badge, Button, Card, Spinner } from "../../components/ui";
+import { Badge, Button, Card, IconButton, SectionTitle, Skeleton } from "../../components/ui";
+import { EditableText } from "../../components/EditableText";
 import { duration, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { useNow } from "../../lib/useNow";
 import { usePermissions } from "../../lib/permissions";
 import { printReceipt } from "../../lib/printReceipt";
+import { toastBus } from "../../lib/toastBus";
 import {
   useCloseTicket,
+  useRenameGuest,
   useSeatOutGuest,
   useSettings,
   useTicket,
@@ -26,12 +29,7 @@ import { MergeModal } from "./MergeModal";
 import { SplitModal } from "./SplitModal";
 import { MoveGuestModal } from "./MoveGuestModal";
 
-const statusTone = {
-  OPEN: "emerald",
-  CLOSED: "amber",
-  PAID: "sky",
-  VOID: "rose",
-} as const;
+const statusTone = { OPEN: "emerald", CLOSED: "amber", PAID: "sky", VOID: "rose" } as const;
 
 export function TicketPanel({
   ticketId,
@@ -49,14 +47,18 @@ export function TicketPanel({
   const closeTicket = useCloseTicket();
   const voidItem = useVoidItem(ticketId);
   const seatOut = useSeatOutGuest();
+  const rename = useRenameGuest();
 
-  const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split" | "close">(null);
+  const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split">(null);
   const [moveGuest, setMoveGuest] = useState<TicketView["guests"][number] | null>(null);
 
   if (ticketQ.isLoading || settingsQ.isLoading) {
     return (
-      <Card className="flex h-full items-center justify-center p-6">
-        <Spinner />
+      <Card className="flex h-full flex-col gap-3 p-4">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="mt-auto h-11 w-full" />
       </Card>
     );
   }
@@ -72,27 +74,36 @@ export function TicketPanel({
     ? computeTicketTotals({ ticket, guests: ticket.guests, items: ticket.items }, settings, now)
     : ticket.live;
   const balance = ticket.totalYen - ticket.paidYen;
+  const oldest = ticket.guests.reduce(
+    (min, g) => Math.min(min, Date.parse(g.arrivalAt)),
+    Number.POSITIVE_INFINITY,
+  );
 
   return (
     <Card className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 p-3">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-800">
-            {t("ticket.title", { n: ticket.number })}
+      {/* header */}
+      <div className="flex items-center gap-2 border-b border-stone-100 px-3 py-2.5">
+        <span className="font-semibold text-stone-800">
+          {t("ticket.title", { n: ticket.number })}
+        </span>
+        <Badge tone={statusTone[ticket.status]} dot>
+          {t(`ticket.status.${ticket.status}`)}
+        </Badge>
+        {Number.isFinite(oldest) ? (
+          <span className="text-xs tabular-nums text-stone-400">
+            ⏱ {duration(elapsedMs(new Date(oldest), now))}
           </span>
-          <Badge tone={statusTone[ticket.status]}>{t(`ticket.status.${ticket.status}`)}</Badge>
-        </div>
-        <button className="text-slate-400 hover:text-slate-600" onClick={onClose}>
+        ) : null}
+        <IconButton label="close" className="ml-auto" onClick={onClose}>
           ✕
-        </button>
+        </IconButton>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <section>
-          <div className="mb-1 text-xs font-medium uppercase text-slate-400">
-            {t("ticket.guests")}
-          </div>
-          <ul className="space-y-1">
+        {/* guests */}
+        <section className="space-y-1.5">
+          <SectionTitle>{t("ticket.guests")}</SectionTitle>
+          <ul className="space-y-1.5">
             {ticket.guests.map((g, i) => {
               const charge = computeGuestCharge(g, settings, now);
               const seated = g.status === "SEATED";
@@ -101,41 +112,45 @@ export function TicketPanel({
                   ? elapsedMs(new Date(g.arrivalAt), new Date(g.closedAt))
                   : elapsedMs(new Date(g.arrivalAt), now);
               return (
-                <li
-                  key={g.id}
-                  className={`rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm ${
-                    seated ? "" : "opacity-60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-700">
-                      {g.displayName ?? `#${i + 1}`}
+                <li key={g.id} className={cnRow(seated)}>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-semibold text-stone-600">
+                    {(g.displayName ?? String(i + 1)).slice(0, 1).toUpperCase()}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <EditableText
+                        value={g.displayName}
+                        placeholder={`${t("seatIn.guest")} ${i + 1}`}
+                        disabled={!perms.canServe}
+                        className="text-sm font-medium text-stone-700"
+                        onCommit={(name) => rename.mutate({ guestId: g.id, displayName: name })}
+                      />
                       {g.seatLabel ? (
-                        <span className="ml-1.5 text-xs text-slate-400">· {g.seatLabel}</span>
+                        <span className="rounded bg-stone-100 px-1 text-[10px] font-medium text-stone-500">
+                          {g.seatLabel}
+                        </span>
                       ) : null}
-                    </span>
-                    <span className="flex items-center gap-3 tabular-nums text-slate-500">
+                    </div>
+                    <div className="flex items-center gap-2 text-xs tabular-nums text-stone-400">
                       <span>{duration(ms)}</span>
-                      <span className="font-medium text-slate-700">
+                      <span className="font-medium text-stone-600">
                         {yen(charge.timeChargeYen, locale)}
                       </span>
-                    </span>
+                    </div>
                   </div>
                   {isOpen && seated && perms.canServe ? (
-                    <div className="mt-1 flex gap-2">
-                      <button
-                        className="text-xs text-slate-500 hover:text-slate-800 hover:underline"
-                        onClick={() => setMoveGuest(g)}
-                      >
-                        {t("ticket.move")}
-                      </button>
-                      <button
-                        className="text-xs text-rose-500 hover:underline"
+                    <div className="flex shrink-0 gap-0.5">
+                      <IconButton label={t("ticket.move")} onClick={() => setMoveGuest(g)}>
+                        ⇄
+                      </IconButton>
+                      <IconButton
+                        label={t("ticket.leave")}
+                        className="hover:text-rose-600"
                         disabled={seatOut.isPending}
                         onClick={() => seatOut.mutate(g.id)}
                       >
-                        {t("ticket.leave")}
-                      </button>
+                        ⏻
+                      </IconButton>
                     </div>
                   ) : null}
                 </li>
@@ -144,46 +159,57 @@ export function TicketPanel({
           </ul>
         </section>
 
-        <section>
-          <div className="mb-1 text-xs font-medium uppercase text-slate-400">
-            {t("ticket.items")}
-          </div>
+        {/* items */}
+        <section className="space-y-1.5">
+          <SectionTitle>{t("ticket.items")}</SectionTitle>
           <ul className="space-y-1">
             {ticket.items.map((it) => (
               <li
                 key={it.id}
                 className={`flex items-center justify-between rounded-lg px-2.5 py-1.5 text-sm ${
-                  it.voided ? "text-slate-300 line-through" : "text-slate-700"
+                  it.voided ? "text-stone-300 line-through" : "text-stone-700"
                 }`}
               >
                 <span>
-                  {it.nameSnapshot} ×{it.quantity}
+                  {it.nameSnapshot} <span className="text-stone-400">×{it.quantity}</span>
                 </span>
                 <span className="flex items-center gap-2 tabular-nums">
                   {yen(it.unitPriceYen * it.quantity, locale)}
                   {isOpen && !it.voided ? (
-                    <button
-                      className="text-xs text-rose-500 hover:underline"
+                    <IconButton
+                      label={t("ticket.void")}
+                      className="h-6 w-6 hover:text-rose-600"
                       onClick={() => voidItem.mutate(it.id)}
                     >
-                      {t("ticket.void")}
-                    </button>
+                      ×
+                    </IconButton>
                   ) : null}
                 </span>
               </li>
             ))}
-            {ticket.items.length === 0 ? (
-              <li className="px-2.5 py-1.5 text-sm text-slate-300">—</li>
+            {isOpen && perms.canServe ? (
+              <li>
+                <button
+                  onClick={() => setModal("pos")}
+                  className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-stone-300 py-2 text-sm font-medium text-stone-500 hover:border-accent hover:text-accent"
+                >
+                  ＋ {t("ticket.addProduct")}
+                </button>
+              </li>
+            ) : ticket.items.length === 0 ? (
+              <li className="px-2.5 py-1.5 text-sm text-stone-300">—</li>
             ) : null}
           </ul>
         </section>
 
-        <section className="space-y-1 border-t border-slate-200 pt-3 text-sm">
+        {/* totals */}
+        <section className="rounded-xl bg-accent-50 p-3 text-sm">
           <Row label={t("ticket.time")} value={yen(totals.timeYen, locale)} />
           <Row label={t("ticket.products")} value={yen(totals.productsYen, locale)} />
           {totals.discountYen ? (
             <Row label={t("ticket.discount")} value={`-${yen(totals.discountYen, locale)}`} />
           ) : null}
+          <div className="my-1 border-t border-accent-100" />
           <Row label={t("ticket.total")} value={yen(totals.totalYen, locale)} strong />
           {ticket.paidYen > 0 ? (
             <>
@@ -194,48 +220,79 @@ export function TicketPanel({
         </section>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-t border-slate-200 p-3">
-        {isOpen ? (
-          <>
-            {perms.canServe ? (
-              <Button size="sm" onClick={() => setModal("pos")}>
-                {t("ticket.addProduct")}
-              </Button>
-            ) : null}
+      {/* action bar */}
+      <div className="border-t border-stone-100 p-3">
+        {isOpen && perms.canServe ? (
+          <div className="flex gap-2">
             {perms.canCashier ? (
               <>
-                <Button size="sm" variant="secondary" onClick={() => setModal("merge")}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setModal("merge")}
+                >
                   {t("ticket.merge")}
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => setModal("split")}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setModal("split")}
+                >
                   {t("ticket.split")}
                 </Button>
                 <Button
-                  size="sm"
                   variant="success"
-                  disabled={closeTicket.isPending}
+                  size="sm"
+                  className="flex-1"
+                  loading={closeTicket.isPending}
                   onClick={() =>
-                    closeTicket.mutate({ id: ticket.id }, { onSuccess: () => setModal(null) })
+                    closeTicket.mutate(
+                      { id: ticket.id },
+                      { onSuccess: () => toastBus.success(t("ticket.closed")) },
+                    )
                   }
                 >
                   {t("ticket.close")}
                 </Button>
               </>
+            ) : (
+              <Button className="flex-1" onClick={() => setModal("pos")}>
+                ＋ {t("ticket.addProduct")}
+              </Button>
+            )}
+          </div>
+        ) : null}
+        {ticket.status === "CLOSED" ? (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => printReceipt(ticket, locale)}>
+              {t("ticket.print")}
+            </Button>
+            {perms.canCashier ? (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setModal("split")}
+                >
+                  {t("ticket.split")}
+                </Button>
+                <Button size="sm" className="flex-1" onClick={() => setModal("pay")}>
+                  {t("ticket.pay")}
+                </Button>
+              </>
             ) : null}
-          </>
+          </div>
         ) : null}
-        {ticket.status === "CLOSED" && perms.canCashier ? (
-          <>
-            <Button size="sm" variant="secondary" onClick={() => setModal("split")}>
-              {t("ticket.split")}
-            </Button>
-            <Button size="sm" variant="success" onClick={() => setModal("pay")}>
-              {t("ticket.pay")}
-            </Button>
-          </>
-        ) : null}
-        {!isOpen ? (
-          <Button size="sm" variant="ghost" onClick={() => printReceipt(ticket, locale)}>
+        {ticket.status === "PAID" ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={() => printReceipt(ticket, locale)}
+          >
             {t("ticket.print")}
           </Button>
         ) : null}
@@ -262,6 +319,10 @@ export function TicketPanel({
   );
 }
 
+function cnRow(seated: boolean): string {
+  return `flex items-center gap-2.5 rounded-lg bg-stone-50 px-2 py-1.5 ${seated ? "" : "opacity-60"}`;
+}
+
 function Row({
   label,
   value,
@@ -272,9 +333,9 @@ function Row({
   strong?: boolean;
 }): JSX.Element {
   return (
-    <div className="flex justify-between">
-      <span className="text-slate-500">{label}</span>
-      <span className={strong ? "font-semibold text-slate-900" : "tabular-nums text-slate-700"}>
+    <div className="flex justify-between py-0.5">
+      <span className="text-stone-500">{label}</span>
+      <span className={strong ? "font-bold text-stone-900" : "tabular-nums text-stone-700"}>
         {value}
       </span>
     </div>

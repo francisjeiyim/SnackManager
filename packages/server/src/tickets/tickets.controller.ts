@@ -50,8 +50,13 @@ export class TicketsController {
   }
 
   @Get()
-  list(@Query("status") status?: string, @Query("serviceDay") serviceDay?: string) {
-    return this.tickets.list({ status, serviceDay });
+  list(
+    @Query("status") status?: string,
+    @Query("serviceDay") serviceDay?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    return this.tickets.list({ status, serviceDay, from, to });
   }
 
   @Get(":id")

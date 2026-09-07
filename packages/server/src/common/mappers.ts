@@ -35,6 +35,7 @@ export const toSettings = (r: PSettings): Settings => ({
   timeRounding: r.timeRounding,
   defaultLocale: r.defaultLocale,
   serviceDayCutoverHour: r.serviceDayCutoverHour,
+  hourWarningIntervalMinutes: r.hourWarningIntervalMinutes,
   hourWarningMinutes: r.hourWarningMinutes,
   updatedAt: iso(r.updatedAt),
 });
@@ -115,6 +116,7 @@ export const toTicketItem = (r: PTicketItem): TicketItem => ({
 export const toTicket = (r: PTicket): Ticket => ({
   id: r.id,
   number: r.number,
+  serviceDay: r.serviceDay,
   status: r.status,
   openedAt: iso(r.openedAt),
   closedAt: isoOrNull(r.closedAt),
