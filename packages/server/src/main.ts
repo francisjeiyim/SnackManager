@@ -1,22 +1,22 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
+import { ConfigService } from "@nestjs/config";
 import { Logger } from "@nestjs/common";
 import { AppModule } from "./app.module";
+import type { AppConfig } from "./config/configuration";
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { cors: false });
 
-  const origins = (process.env.CORS_ORIGINS ?? "http://localhost:5273")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  app.enableCors({ origin: origins, credentials: true });
+  const config = app.get(ConfigService).get<AppConfig>("app", { infer: true });
+  if (!config) throw new Error("app config missing");
 
+  app.enableCors({ origin: config.corsOrigins, credentials: true });
   app.setGlobalPrefix("api");
+  app.enableShutdownHooks();
 
-  const port = Number(process.env.SERVER_PORT ?? 4100);
-  await app.listen(port);
-  Logger.log(`SnackManager API listening on http://localhost:${port}/api`, "Bootstrap");
+  await app.listen(config.port);
+  Logger.log(`SnackManager API on http://localhost:${config.port}/api`, "Bootstrap");
 }
 
 void bootstrap();

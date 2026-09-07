@@ -12,4 +12,5 @@ export * from "./types.js";
 export * from "./money.js";
 export * from "./time.js";
 export * from "./billing/index.js";
+export * from "./schemas.js";
 export * as schemas from "./schemas.js";

@@ -54,7 +54,12 @@ pnpm build
 - **Phase 1 — billing engine** (`packages/shared`): done. Enums, domain types, Zod schemas,
   money/time helpers and the pure billing engine (billed minutes, time charge, ticket totals,
   close, merge, itemized + even split) with 50 unit tests.
-- **Next — Phase 2**: NestJS API (Prisma schema, modules, REST, Zod validation, JWT + roles,
-  Socket.IO gateway, seed, e2e tests).
+- **Phase 2 — NestJS API** (`packages/server`): done. Prisma schema + migration + seed, feature
+  modules (auth, users, settings, rooms, seats, products, guests, tickets, payments, audit),
+  REST with Zod validation, JWT + 3-role guard, Socket.IO `/service` gateway, `AllExceptionsFilter`
+  mapping `BillingError` → 409. Full seat-in → order → close → merge → split → pay flow covered by
+  9 e2e tests against a real Postgres. Endpoint reference in [`docs/API.md`](docs/API.md).
+- **Next — Phase 3**: Vite + React PWA shell, repository interface + HTTP adapter, service board,
+  ticket panel, products admin, invoices, settings — wired to the API with live Socket.IO updates.
 
 Full plan in `docs/` and the approved plan file.

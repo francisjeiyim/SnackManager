@@ -1,0 +1,261 @@
+// SnackManager — PostgreSQL schema.
+// Mirrored (table/column names) by packages/app/src/data/local/schema.sql for
+// autonomous mode; a parity test keeps them in sync.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- enums ---------------------------------------------------------------
+
+enum Currency {
+  JPY
+}
+
+enum Locale {
+  ja
+  en
+}
+
+enum TimeRounding {
+  NONE
+  CEIL_MINUTE
+  CEIL_5MIN
+}
+
+enum SeatKind {
+  PERMANENT
+  DYNAMIC
+}
+
+enum SeatShape {
+  RECT
+  ROUND
+}
+
+enum GuestStatus {
+  SEATED
+  CLOSED
+}
+
+enum TicketStatus {
+  OPEN
+  CLOSED
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE
+  OTHER
+}
+
+enum UserRole {
+  ADMIN
+  CASHIER
+  SERVER
+}
+
+// --- models -----------------------------------------------------------
+
+model Settings {
+  id                      String       @id @default("settings")
+  currency                Currency     @default(JPY)
+  defaultRatePerMinuteYen Int          @default(10)
+  graceMinutes            Int          @default(0)
+  minChargeMinutes        Int          @default(0)
+  timeRounding            TimeRounding @default(CEIL_MINUTE)
+  defaultLocale           Locale       @default(ja)
+  serviceDayCutoverHour   Int          @default(5)
+  updatedAt               DateTime     @updatedAt
+}
+
+model User {
+  id            String         @id @default(uuid())
+  username      String         @unique
+  passwordHash  String
+  displayName   String?
+  role          UserRole       @default(SERVER)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+  ticketItems   TicketItem[]
+  payments      Payment[]
+  auditLogs     AuditLog[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Room {
+  id         String @id @default(uuid())
+  name       String
+  width      Int    @default(1200)
+  height     Int    @default(800)
+  background String?
+  sortOrder  Int    @default(0)
+  seats      Seat[]
+  guests     Guest[]
+}
+
+model Seat {
+  id          String    @id @default(uuid())
+  roomId      String
+  room        Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  label       String
+  x           Float     @default(0)
+  y           Float     @default(0)
+  w           Float     @default(80)
+  h           Float     @default(80)
+  rotationDeg Float     @default(0)
+  shape       SeatShape @default(RECT)
+  color       String?
+  kind        SeatKind  @default(PERMANENT)
+  isActive    Boolean   @default(true)
+  guests      Guest[]
+
+  @@unique([roomId, label])
+  @@index([roomId])
+}
+
+model Party {
+  id        String   @id @default(uuid())
+  label     String?
+  arrivalAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  guests    Guest[]
+}
+
+model Guest {
+  id                       String      @id @default(uuid())
+  seatId                   String
+  seat                     Seat        @relation(fields: [seatId], references: [id])
+  roomId                   String
+  room                     Room        @relation(fields: [roomId], references: [id])
+  partyId                  String?
+  party                    Party?      @relation(fields: [partyId], references: [id])
+  displayName              String?
+  arrivalAt                DateTime    @default(now())
+  closedAt                 DateTime?
+  ratePerMinuteYenSnapshot Int
+  billedMinutes            Int?
+  timeChargeYen            Int?
+  ticketId                 String?
+  ticket                   Ticket?     @relation(fields: [ticketId], references: [id])
+  status                   GuestStatus @default(SEATED)
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+  items                    TicketItem[]
+
+  @@index([ticketId])
+  @@index([seatId])
+  @@index([status])
+}
+
+model Product {
+  id        String       @id @default(uuid())
+  name      String
+  category  String?
+  priceYen  Int
+  isActive  Boolean      @default(true)
+  sortOrder Int          @default(0)
+  color     String?
+  emoji     String?
+  items     TicketItem[]
+}
+
+model Ticket {
+  id                 String       @id @default(uuid())
+  number             Int
+  serviceDay         String
+  status             TicketStatus @default(OPEN)
+  openedAt           DateTime     @default(now())
+  closedAt           DateTime?
+  paidAt             DateTime?
+  notes              String?
+  discountYen        Int          @default(0)
+  timeYen            Int          @default(0)
+  productsYen        Int          @default(0)
+  totalYen           Int          @default(0)
+  paidYen            Int          @default(0)
+  splitFromTicketId  String?
+  mergedIntoTicketId String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  guests             Guest[]
+  items              TicketItem[]
+  payments           Payment[]
+
+  @@unique([serviceDay, number])
+  @@index([status])
+}
+
+model TicketItem {
+  id            String   @id @default(uuid())
+  ticketId      String
+  ticket        Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id])
+  nameSnapshot  String
+  unitPriceYen  Int
+  quantity      Int      @default(1)
+  guestId       String?
+  guest         Guest?   @relation(fields: [guestId], references: [id])
+  addedAt       DateTime @default(now())
+  addedByUserId String?
+  addedBy       User?    @relation(fields: [addedByUserId], references: [id])
+  voided        Boolean  @default(false)
+
+  @@index([ticketId])
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  ticketId         String
+  ticket           Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  amountYen        Int
+  method           PaymentMethod
+  paidAt           DateTime      @default(now())
+  receivedByUserId String?
+  receivedBy       User?         @relation(fields: [receivedByUserId], references: [id])
+  reference        String?
+
+  @@index([ticketId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  at         DateTime @default(now())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  dataJson   Json?
+
+  @@index([entityType, entityId])
+  @@index([at])
+}
+
+// One row per service day; guards ticket-number allocation.
+model TicketCounter {
+  serviceDay String @id
+  lastNumber Int    @default(0)
+}

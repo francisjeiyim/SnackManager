@@ -83,6 +83,8 @@ export const seatInSchema = z.object({
   /** Attach to this existing party; omit to create a new one. */
   partyId: id.nullable().optional(),
   partyLabel: z.string().min(1).max(40).nullable().optional(),
+  /** One ticket per guest instead of one shared ticket for the group. */
+  separateTickets: z.boolean().default(false),
   /** Defaults to server clock. Accepts an explicit arrival for backdating. */
   arrivalAt: z.string().datetime().optional(),
 });
@@ -96,14 +98,18 @@ export type MoveGuestInput = z.infer<typeof moveGuestSchema>;
 
 // --- Ticket lines -----------------------------------------------------
 
-export const addItemSchema = z.object({
-  ticketId: id,
-  productId: id.nullable().optional(),
-  nameSnapshot: z.string().min(1).max(80).optional(),
-  unitPriceYen: yen.nonnegative().optional(),
-  quantity: positiveInt.default(1),
-  guestId: id.nullable().optional(),
-});
+export const addItemSchema = z
+  .object({
+    ticketId: id,
+    productId: id.nullable().optional(),
+    nameSnapshot: z.string().min(1).max(80).optional(),
+    unitPriceYen: yen.nonnegative().optional(),
+    quantity: positiveInt.default(1),
+    guestId: id.nullable().optional(),
+  })
+  .refine((v) => v.productId != null || (v.nameSnapshot != null && v.unitPriceYen != null), {
+    message: "provide productId, or both nameSnapshot and unitPriceYen",
+  });
 export type AddItemInput = z.infer<typeof addItemSchema>;
 
 // --- Merge / split / close / pay ------------------------------------
@@ -134,6 +140,12 @@ export const closeTicketSchema = z.object({
   closedAt: z.string().datetime().optional(),
 });
 export type CloseTicketInput = z.infer<typeof closeTicketSchema>;
+
+export const ticketPatchSchema = z.object({
+  notes: z.string().max(500).nullable().optional(),
+  discountYen: yen.nonnegative().optional(),
+});
+export type TicketPatchInput = z.infer<typeof ticketPatchSchema>;
 
 export const paymentSchema = z.object({
   ticketId: id,

@@ -10,24 +10,49 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: pnpm/action-setup@v4
         with:
           version: 11.21.0
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
-
       - run: pnpm format:check
-
       - run: pnpm lint
-
       - run: pnpm typecheck
-
       - run: pnpm test
-
       - run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: snackmanager
+          POSTGRES_PASSWORD: snackmanager
+          POSTGRES_DB: snackmanager
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U snackmanager"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://snackmanager:snackmanager@localhost:5434/snackmanager?schema=public
+      DATABASE_URL_TEST: postgresql://snackmanager:snackmanager@localhost:5434/snackmanager_test?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.21.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @snackmanager/shared build
+      - run: pnpm --filter @snackmanager/server prisma:generate
+      - run: pnpm --filter @snackmanager/server test:e2e
