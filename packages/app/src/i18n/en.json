@@ -4,9 +4,23 @@
     "board": "Floor",
     "layout": "Layout",
     "invoices": "Invoices",
+    "reports": "Report",
     "products": "Products",
     "settings": "Settings",
     "logout": "Log out"
+  },
+  "reports": {
+    "title": "Daily report (Z-report)",
+    "revenue": "Revenue",
+    "tickets": "Tickets",
+    "openTickets": "Open",
+    "guests": "Guests",
+    "timeShare": "Time charge",
+    "productShare": "Products",
+    "avgGuests": "Avg guests / ticket",
+    "avgStay": "Avg stay",
+    "occupancy": "Seat occupancy",
+    "byMethod": "By payment method"
   },
   "layout": {
     "properties": "Properties",

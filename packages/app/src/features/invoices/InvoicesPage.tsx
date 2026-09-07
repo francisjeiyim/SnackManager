@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Badge, Card, Modal, Select, Spinner } from "../../components/ui";
+import { Badge, Button, Card, Modal, Select, Spinner } from "../../components/ui";
 import { dateTime, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
+import { printReceipt } from "../../lib/printReceipt";
 import { useTicketHistory } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
 
@@ -79,6 +80,11 @@ export function InvoicesPage(): JSX.Element {
           onClose={() => setDetail(null)}
           title={t("ticket.title", { n: detail.number })}
           wide
+          footer={
+            <Button variant="secondary" onClick={() => printReceipt(detail, locale)}>
+              {t("ticket.print")}
+            </Button>
+          }
         >
           <div className="space-y-3 text-sm">
             <div className="flex gap-2">

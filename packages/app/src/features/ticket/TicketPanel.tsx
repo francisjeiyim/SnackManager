@@ -10,6 +10,8 @@ import { Badge, Button, Card, Spinner } from "../../components/ui";
 import { duration, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { useNow } from "../../lib/useNow";
+import { usePermissions } from "../../lib/permissions";
+import { printReceipt } from "../../lib/printReceipt";
 import { useCloseTicket, useSettings, useTicket, useVoidItem } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
 import { PosGridModal } from "./PosGridModal";
@@ -34,6 +36,7 @@ export function TicketPanel({
   const { t } = useTranslation();
   const locale = storedLocale();
   const now = useNow(1000);
+  const perms = usePermissions();
   const ticketQ = useTicket(ticketId);
   const settingsQ = useSettings();
   const closeTicket = useCloseTicket();
@@ -158,28 +161,34 @@ export function TicketPanel({
       <div className="flex flex-wrap gap-2 border-t border-slate-200 p-3">
         {isOpen ? (
           <>
-            <Button size="sm" onClick={() => setModal("pos")}>
-              {t("ticket.addProduct")}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setModal("merge")}>
-              {t("ticket.merge")}
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setModal("split")}>
-              {t("ticket.split")}
-            </Button>
-            <Button
-              size="sm"
-              variant="success"
-              disabled={closeTicket.isPending}
-              onClick={() =>
-                closeTicket.mutate({ id: ticket.id }, { onSuccess: () => setModal(null) })
-              }
-            >
-              {t("ticket.close")}
-            </Button>
+            {perms.canServe ? (
+              <Button size="sm" onClick={() => setModal("pos")}>
+                {t("ticket.addProduct")}
+              </Button>
+            ) : null}
+            {perms.canCashier ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setModal("merge")}>
+                  {t("ticket.merge")}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setModal("split")}>
+                  {t("ticket.split")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="success"
+                  disabled={closeTicket.isPending}
+                  onClick={() =>
+                    closeTicket.mutate({ id: ticket.id }, { onSuccess: () => setModal(null) })
+                  }
+                >
+                  {t("ticket.close")}
+                </Button>
+              </>
+            ) : null}
           </>
         ) : null}
-        {ticket.status === "CLOSED" ? (
+        {ticket.status === "CLOSED" && perms.canCashier ? (
           <>
             <Button size="sm" variant="secondary" onClick={() => setModal("split")}>
               {t("ticket.split")}
@@ -188,6 +197,11 @@ export function TicketPanel({
               {t("ticket.pay")}
             </Button>
           </>
+        ) : null}
+        {!isOpen ? (
+          <Button size="sm" variant="ghost" onClick={() => printReceipt(ticket, locale)}>
+            {t("ticket.print")}
+          </Button>
         ) : null}
       </div>
 

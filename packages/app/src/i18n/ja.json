@@ -4,9 +4,23 @@
     "board": "フロア",
     "layout": "レイアウト",
     "invoices": "会計履歴",
+    "reports": "日報",
     "products": "商品",
     "settings": "設定",
     "logout": "ログアウト"
+  },
+  "reports": {
+    "title": "日報 (Zレポート)",
+    "revenue": "売上",
+    "tickets": "会計数",
+    "openTickets": "未会計",
+    "guests": "客数",
+    "timeShare": "時間料金",
+    "productShare": "商品売上",
+    "avgGuests": "平均人数/会計",
+    "avgStay": "平均滞在",
+    "occupancy": "座席稼働率",
+    "byMethod": "支払方法別"
   },
   "layout": {
     "properties": "プロパティ",

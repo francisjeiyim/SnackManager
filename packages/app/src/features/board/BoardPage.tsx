@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { Guest } from "@snackmanager/shared";
 import { Button, Card, Spinner } from "../../components/ui";
 import { cn } from "../../lib/cn";
+import { usePermissions } from "../../lib/permissions";
 import { useRepository } from "../../data/RepositoryContext";
 import { useActiveGuests, useRooms } from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
@@ -12,6 +13,7 @@ import { TicketPanel } from "../ticket/TicketPanel";
 export function BoardPage(): JSX.Element {
   const { t } = useTranslation();
   const repo = useRepository();
+  const { canServe } = usePermissions();
   const roomsQ = useRooms();
   const guestsQ = useActiveGuests();
 
@@ -74,9 +76,11 @@ export function BoardPage(): JSX.Element {
               </button>
             ))}
           </div>
-          <Button size="sm" className="ml-auto" onClick={() => setSeatInSeatId(null)}>
-            {t("board.seatIn")}
-          </Button>
+          {canServe ? (
+            <Button size="sm" className="ml-auto" onClick={() => setSeatInSeatId(null)}>
+              {t("board.seatIn")}
+            </Button>
+          ) : null}
         </div>
 
         {room ? (
@@ -86,7 +90,7 @@ export function BoardPage(): JSX.Element {
               guestsBySeat={guestsBySeat}
               onSeatClick={(seatId, tId) => {
                 if (tId) setTicketId(tId);
-                else setSeatInSeatId(seatId);
+                else if (canServe) setSeatInSeatId(seatId);
               }}
             />
           </div>

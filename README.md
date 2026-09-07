@@ -1,9 +1,10 @@
 # SnackManager
 
-Fast client/server billing for a restaurant, billing each guest on **time spent
-(per minute)** plus **products consumed**. Flexible graphical room plan; bills can
-be merged and split. Runs as an installable **PWA** on Windows, Android and iOS,
-**client/server** (real-time, multi-device) or **fully offline**.
+Fast billing for a restaurant that charges each guest on **time spent (per
+minute)** plus **products consumed**. Graphical room plan, group or individual
+tickets, bills that **merge** and **split**. Installable **PWA** for Windows,
+Android and iOS, running **client/server** (real-time, multi-device) or **fully
+offline**.
 
 ## Packages
 
@@ -13,74 +14,71 @@ be merged and split. Runs as an installable **PWA** on Windows, Android and iOS,
 | `packages/server` | NestJS + Prisma + PostgreSQL API + Socket.IO gateway (client/server mode). |
 | `packages/app`    | Vite + React PWA — the UI, both modes.                                     |
 
-See [`docs/`](docs) for architecture, data model, billing rules and modes.
+Docs: [ARCHITECTURE](docs/ARCHITECTURE.md) · [DATA-MODEL](docs/DATA-MODEL.md) ·
+[BILLING](docs/BILLING.md) · [API](docs/API.md) · [MODES](docs/MODES.md) ·
+[INSTALL](docs/INSTALL.md)
+
+## Features
+
+- **Service board** — per-room floor plan from real seat geometry, colour-coded
+  by state, live chronometers. Seat guests as a group or individually.
+- **Ticket panel** — live per-guest elapsed time and time charge (ticking every
+  second), POS product grid, void, **close** (stops chronometers, frees seats),
+  **merge**, **split** (itemised or into equal shares), **pay** with change due,
+  printable receipt.
+- **Room-layout editor** — drag / resize / rotate seats on a canvas, permanent
+  vs dynamic seats, multiple rooms, background colour.
+- **Invoices** — searchable history with a detail view and receipt reprint.
+- **Daily Z-report** — revenue, time vs product split, payments by method,
+  average party size and stay, seat occupancy, for any service day.
+- **Settings** — deployment mode, billing (rate/min, grace, minimum, rounding),
+  language (日本語 / English), staff accounts, local-data backup.
+- **Roles** — `ADMIN` (everything), `CASHIER` (close / merge / split / void /
+  pay), `SERVER` (seat, order). Enforced by the API and reflected in the UI.
 
 ## Prerequisites
 
 - Node ≥ 20, pnpm 11
-- Docker (only for client/server mode: PostgreSQL)
+- Docker — only for client/server mode (PostgreSQL)
 
 ## Setup
 
 ```bash
 pnpm install
 cp .env.example .env
+cp packages/server/.env.example packages/server/.env
 ```
 
-## Develop
+## Develop — client/server mode
 
 ```bash
-# client/server mode
 docker compose up -d postgres
-pnpm --filter @snackmanager/server prisma:migrate   # after Phase 2 lands
+pnpm --filter @snackmanager/server prisma:migrate
 pnpm --filter @snackmanager/server seed
-pnpm dev                                            # server + app via Turbo
+pnpm dev
 ```
 
-App: http://localhost:5273 — API: http://localhost:4100/api — Adminer: http://localhost:8082
+App: http://localhost:5273 · API: http://localhost:4100/api · Adminer: http://localhost:8082
+
+Seeded logins: `admin` / `admin1234`, `caisse` / `caisse1234`, `service` / `service1234`.
+
+## Develop — standalone (offline) mode
+
+```bash
+pnpm --filter @snackmanager/app dev
+```
+
+Open Settings → set mode to **Standalone** → reload. No server needed; the app
+seeds its own in-browser SQLite database on first run.
 
 ## Test / lint / build
 
 ```bash
-pnpm test
+pnpm test        # shared billing engine (50) + schema parity (14)
 pnpm lint
 pnpm typecheck
 pnpm build
+pnpm --filter @snackmanager/server test:e2e   # needs Postgres; 9 flow tests
 ```
 
-## Status
-
-- **Phase 0 — scaffold**: done. pnpm/Turbo workspace, three packages, tooling, CI, docker-compose, docs.
-- **Phase 1 — billing engine** (`packages/shared`): done. Enums, domain types, Zod schemas,
-  money/time helpers and the pure billing engine (billed minutes, time charge, ticket totals,
-  close, merge, itemized + even split) with 50 unit tests.
-- **Phase 2 — NestJS API** (`packages/server`): done. Prisma schema + migration + seed, feature
-  modules (auth, users, settings, rooms, seats, products, guests, tickets, payments, audit),
-  REST with Zod validation, JWT + 3-role guard, Socket.IO `/service` gateway, `AllExceptionsFilter`
-  mapping `BillingError` → 409. Full seat-in → order → close → merge → split → pay flow covered by
-  9 e2e tests against a real Postgres. Endpoint reference in [`docs/API.md`](docs/API.md).
-- **Phase 3 — React PWA** (`packages/app`): done. Vite + React + Router + Tailwind, `vite-plugin-pwa`,
-  `react-i18next` (ja default / en). `SnackRepository` interface with an `HttpRepository` adapter
-  (fetch + JWT refresh) and a Socket.IO subscription that invalidates TanStack Query caches.
-  Screens: login, service board (live floor plan, seat colours, chronometers), ticket panel
-  (live per-guest timers + charges, POS grid, void, close, merge, split, pay), products admin,
-  invoices history + detail, settings (mode / server URL / billing / locale / staff). Whole
-  login → seat-in → order → close → pay → invoices flow verified in-browser.
-- **Phase 4 — room-layout editor** (`packages/app` → `/rooms`): done. Canvas with pointer-driven
-  drag / resize / rotate (grid-snapped), a per-seat properties panel (label, kind PERMANENT ·
-  DYNAMIC, shape, geometry, active), add permanent / dynamic seats, multi-room tabs, add room,
-  room settings (name, size, background colour), delete seat / room. Local edits show an
-  "unsaved" badge and persist through `PATCH /seats/bulk`; verified in-browser (move → save →
-  reload keeps position; add/delete dynamic seat).
-- **Phase 5 — standalone mode** (`packages/app`): done. `SqliteRepository` implements the whole
-  `SnackRepository` in the browser over `@sqlite.org/sqlite-wasm` — OPFS sync-access-handle pool
-  when available, `localStorage` (kvvfs) fallback, in-memory last resort. Every money/time
-  calculation goes through the same `@snackmanager/shared` engine (`planClose` / `planMerge` /
-  `planSplit` / `computeTicketTotals`), so an offline bill matches a server one. `schema.sql`
-  mirrors `schema.prisma`, enforced by a 14-case parity test. Cross-tab updates via
-  `BroadcastChannel`; first-run seed; `.sqlite3` export / import / reset in Settings; no login
-  screen (implicit local admin). Verified in-browser: seat-in → order → close → pay → even split,
-  and data surviving a full reload.
-
-Full plan in `docs/` and the approved plan file. Remaining: Phase 6 — receipts, daily Z-report,
-PWA icons + install docs, README polish.
+`pnpm gen:icons` regenerates the PWA icons.

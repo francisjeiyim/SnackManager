@@ -65,6 +65,15 @@ export function useTicketHistory(status?: string) {
   });
 }
 
+export function useTicketsByDay(serviceDay: string) {
+  const repo = useRepository();
+  return useQuery({
+    queryKey: ["tickets", "day", serviceDay],
+    queryFn: () => repo.listTickets({ serviceDay }),
+    enabled: !!serviceDay,
+  });
+}
+
 export function useTicket(id: string | null) {
   const repo = useRepository();
   return useQuery({
