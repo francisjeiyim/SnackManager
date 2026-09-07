@@ -59,7 +59,14 @@ pnpm build
   REST with Zod validation, JWT + 3-role guard, Socket.IO `/service` gateway, `AllExceptionsFilter`
   mapping `BillingError` → 409. Full seat-in → order → close → merge → split → pay flow covered by
   9 e2e tests against a real Postgres. Endpoint reference in [`docs/API.md`](docs/API.md).
-- **Next — Phase 3**: Vite + React PWA shell, repository interface + HTTP adapter, service board,
-  ticket panel, products admin, invoices, settings — wired to the API with live Socket.IO updates.
+- **Phase 3 — React PWA** (`packages/app`): done. Vite + React + Router + Tailwind, `vite-plugin-pwa`,
+  `react-i18next` (ja default / en). `SnackRepository` interface with an `HttpRepository` adapter
+  (fetch + JWT refresh) and a Socket.IO subscription that invalidates TanStack Query caches.
+  Screens: login, service board (live floor plan, seat colours, chronometers), ticket panel
+  (live per-guest timers + charges, POS grid, void, close, merge, split, pay), products admin,
+  invoices history + detail, settings (mode / server URL / billing / locale / staff). Whole
+  login → seat-in → order → close → pay → invoices flow verified in-browser.
+- **Next — Phase 4**: graphical room-layout editor (drag / resize / rotate seats, permanent vs
+  dynamic, multi-room), then Phase 5 standalone (in-browser SQLite) mode.
 
 Full plan in `docs/` and the approved plan file.

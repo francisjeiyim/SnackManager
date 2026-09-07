@@ -1,0 +1,145 @@
+{
+  "app": { "name": "SnackManager", "offline": "Offline", "online": "Online" },
+  "nav": {
+    "board": "Floor",
+    "invoices": "Invoices",
+    "products": "Products",
+    "settings": "Settings",
+    "logout": "Log out"
+  },
+  "login": {
+    "title": "Sign in",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": "Wrong username or password"
+  },
+  "board": {
+    "title": "Floor",
+    "free": "Free",
+    "occupied": "Occupied",
+    "overtime": "Long stay",
+    "noRooms": "No rooms yet",
+    "seatIn": "Seat guests",
+    "openTicket": "Open ticket"
+  },
+  "seatIn": {
+    "title": "Seat guests",
+    "count": "Guests",
+    "names": "Names (optional)",
+    "guest": "Guest",
+    "separateTickets": "Separate tickets",
+    "party": "Party",
+    "newParty": "New party",
+    "confirm": "Seat",
+    "pickSeats": "Pick seats ({{n}} / {{total}})"
+  },
+  "ticket": {
+    "title": "Ticket #{{n}}",
+    "guests": "Guests",
+    "items": "Items",
+    "time": "Time",
+    "products": "Products",
+    "discount": "Discount",
+    "total": "Total",
+    "paid": "Paid",
+    "balance": "Balance",
+    "elapsed": "Elapsed",
+    "addProduct": "Add product",
+    "void": "Void",
+    "close": "Close",
+    "merge": "Merge",
+    "split": "Split",
+    "pay": "Pay",
+    "print": "Print receipt",
+    "status": { "OPEN": "Open", "CLOSED": "Closed", "PAID": "Paid", "VOID": "Void" },
+    "empty": "Select a ticket"
+  },
+  "close": {
+    "title": "Close ticket",
+    "confirm": "Confirm close",
+    "hint": "Closing stops the chronometers for this ticket"
+  },
+  "pay": {
+    "title": "Payment",
+    "amount": "Amount",
+    "method": "Method",
+    "reference": "Reference",
+    "confirm": "Take payment",
+    "change": "Change",
+    "methods": { "CASH": "Cash", "CARD": "Card", "MOBILE": "Mobile", "OTHER": "Other" }
+  },
+  "merge": {
+    "title": "Merge tickets",
+    "target": "Keep",
+    "sources": "Merge in",
+    "confirm": "Merge"
+  },
+  "split": {
+    "title": "Split ticket",
+    "mode": "Mode",
+    "itemized": "By item",
+    "even": "Even shares",
+    "parts": "Parts",
+    "moveGuests": "Move guests",
+    "moveItems": "Move items",
+    "confirm": "Split",
+    "shares": "Per-person shares"
+  },
+  "products": {
+    "title": "Products",
+    "name": "Name",
+    "category": "Category",
+    "price": "Price",
+    "active": "Active",
+    "add": "Add product",
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "deactivate": "Deactivate"
+  },
+  "invoices": {
+    "title": "Invoices",
+    "number": "No.",
+    "opened": "Opened",
+    "closed": "Closed",
+    "total": "Total",
+    "status": "Status",
+    "filterStatus": "Filter by status",
+    "all": "All",
+    "empty": "No tickets match",
+    "detail": "Detail"
+  },
+  "settings": {
+    "title": "Settings",
+    "deployment": "Deployment mode",
+    "modeServer": "Client / server",
+    "modeAutonomous": "Standalone (offline)",
+    "autonomousSoon": "Standalone mode arrives in Phase 5",
+    "apiUrl": "Server URL",
+    "billing": "Billing",
+    "ratePerMinute": "Rate per minute (¥)",
+    "graceMinutes": "Grace minutes",
+    "minChargeMinutes": "Minimum charged minutes",
+    "rounding": "Rounding",
+    "roundingNone": "Truncate",
+    "roundingCeilMinute": "Ceil to minute",
+    "roundingCeil5Min": "Ceil to 5 minutes",
+    "locale": "Language",
+    "save": "Save",
+    "saved": "Saved",
+    "staff": "Staff",
+    "addStaff": "Add staff",
+    "role": "Role",
+    "roles": { "ADMIN": "Admin", "CASHIER": "Cashier", "SERVER": "Server" }
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "yen": "¥"
+  }
+}

@@ -1,12 +1,37 @@
-import { SHARED_VERSION } from "@snackmanager/shared";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "react-router-dom";
+import "./i18n";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { LoginPage } from "./auth/LoginPage";
+import { RepositoryProvider } from "./data/RepositoryContext";
+import { Spinner } from "./components/ui";
+import { router } from "./routes";
 
-export function App() {
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 5_000, retry: 1, refetchOnWindowFocus: false } },
+});
+
+function Gate(): JSX.Element {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="flex min-h-full items-center justify-center bg-slate-100">
+        <Spinner className="h-8 w-8" />
+      </div>
+    );
+  }
+  if (!user) return <LoginPage />;
+  return <RouterProvider router={router} />;
+}
+
+export function App(): JSX.Element {
   return (
-    <main className="flex min-h-full flex-col items-center justify-center gap-2 p-8 text-slate-800">
-      <h1 className="text-2xl font-semibold">SnackManager</h1>
-      <p className="text-sm text-slate-500">
-        Scaffold ready — shared core v{SHARED_VERSION}. Screens land in Phase 3.
-      </p>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RepositoryProvider>
+          <Gate />
+        </RepositoryProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

@@ -1,0 +1,150 @@
+{
+  "app": { "name": "SnackManager", "offline": "オフライン", "online": "オンライン" },
+  "nav": {
+    "board": "フロア",
+    "invoices": "会計履歴",
+    "products": "商品",
+    "settings": "設定",
+    "logout": "ログアウト"
+  },
+  "login": {
+    "title": "ログイン",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "submit": "ログイン",
+    "error": "ユーザー名またはパスワードが違います"
+  },
+  "board": {
+    "title": "フロア",
+    "free": "空席",
+    "occupied": "利用中",
+    "overtime": "長時間",
+    "noRooms": "部屋がありません",
+    "seatIn": "客を案内",
+    "openTicket": "伝票を開く"
+  },
+  "seatIn": {
+    "title": "客を案内",
+    "count": "人数",
+    "names": "名前 (任意)",
+    "guest": "客",
+    "separateTickets": "個別会計",
+    "party": "グループ",
+    "newParty": "新規グループ",
+    "confirm": "案内する",
+    "pickSeats": "座席を選択 ({{n}} / {{total}})"
+  },
+  "ticket": {
+    "title": "伝票 #{{n}}",
+    "guests": "客",
+    "items": "注文",
+    "time": "時間料金",
+    "products": "商品",
+    "discount": "割引",
+    "total": "合計",
+    "paid": "支払済",
+    "balance": "残額",
+    "elapsed": "経過",
+    "addProduct": "商品を追加",
+    "void": "取消",
+    "close": "会計",
+    "merge": "まとめる",
+    "split": "分ける",
+    "pay": "支払い",
+    "print": "レシート印刷",
+    "status": {
+      "OPEN": "オープン",
+      "CLOSED": "クローズ",
+      "PAID": "支払済",
+      "VOID": "無効"
+    },
+    "empty": "伝票を選択してください"
+  },
+  "close": {
+    "title": "会計する",
+    "confirm": "会計を確定",
+    "hint": "チェックアウトすると時間の計測が止まります"
+  },
+  "pay": {
+    "title": "支払い",
+    "amount": "金額",
+    "method": "支払方法",
+    "reference": "参照",
+    "confirm": "受領",
+    "change": "おつり",
+    "methods": { "CASH": "現金", "CARD": "カード", "MOBILE": "モバイル決済", "OTHER": "その他" }
+  },
+  "merge": {
+    "title": "伝票をまとめる",
+    "target": "まとめ先",
+    "sources": "まとめる伝票",
+    "confirm": "まとめる"
+  },
+  "split": {
+    "title": "伝票を分ける",
+    "mode": "分け方",
+    "itemized": "項目ごと",
+    "even": "均等割り",
+    "parts": "人数",
+    "moveGuests": "移す客",
+    "moveItems": "移す商品",
+    "confirm": "分ける",
+    "shares": "各自の負担"
+  },
+  "products": {
+    "title": "商品",
+    "name": "名前",
+    "category": "カテゴリ",
+    "price": "価格",
+    "active": "有効",
+    "add": "商品を追加",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "edit": "編集",
+    "deactivate": "無効化"
+  },
+  "invoices": {
+    "title": "会計履歴",
+    "number": "番号",
+    "opened": "開始",
+    "closed": "会計",
+    "total": "合計",
+    "status": "状態",
+    "filterStatus": "状態で絞り込み",
+    "all": "すべて",
+    "empty": "該当する伝票がありません",
+    "detail": "詳細"
+  },
+  "settings": {
+    "title": "設定",
+    "deployment": "動作モード",
+    "modeServer": "クライアント / サーバー",
+    "modeAutonomous": "スタンドアロン (オフライン)",
+    "autonomousSoon": "スタンドアロンモードはフェーズ5で対応します",
+    "apiUrl": "サーバー URL",
+    "billing": "料金",
+    "ratePerMinute": "1分あたりの料金 (円)",
+    "graceMinutes": "無料時間 (分)",
+    "minChargeMinutes": "最低課金時間 (分)",
+    "rounding": "端数処理",
+    "roundingNone": "切り捨て",
+    "roundingCeilMinute": "分単位切り上げ",
+    "roundingCeil5Min": "5分単位切り上げ",
+    "locale": "言語",
+    "save": "保存",
+    "saved": "保存しました",
+    "staff": "スタッフ",
+    "addStaff": "スタッフを追加",
+    "role": "役割",
+    "roles": { "ADMIN": "管理者", "CASHIER": "レジ", "SERVER": "ホール" }
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "cancel": "キャンセル",
+    "confirm": "確定",
+    "close": "閉じる",
+    "yen": "円"
+  }
+}
