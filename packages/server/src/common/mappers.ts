@@ -35,6 +35,7 @@ export const toSettings = (r: PSettings): Settings => ({
   timeRounding: r.timeRounding,
   defaultLocale: r.defaultLocale,
   serviceDayCutoverHour: r.serviceDayCutoverHour,
+  hourWarningMinutes: r.hourWarningMinutes,
   updatedAt: iso(r.updatedAt),
 });
 
@@ -80,7 +81,9 @@ export const toProduct = (r: PProduct): Product => ({
   emoji: r.emoji,
 });
 
-export const toGuest = (r: PGuest): Guest => ({
+type PGuestWithSeat = PGuest & { seat?: { label: string } | null };
+
+export const toGuest = (r: PGuestWithSeat): Guest => ({
   id: r.id,
   seatId: r.seatId,
   roomId: r.roomId,
@@ -93,6 +96,7 @@ export const toGuest = (r: PGuest): Guest => ({
   timeChargeYen: r.timeChargeYen,
   ticketId: r.ticketId,
   status: r.status,
+  seatLabel: r.seat?.label ?? null,
 });
 
 export const toTicketItem = (r: PTicketItem): TicketItem => ({
@@ -147,7 +151,7 @@ export const toPublicUser = (r: PUser): PublicUser => ({
 /** Assemble the {@link TicketBundle} the billing engine consumes. */
 export const toBundle = (
   ticket: PTicket,
-  guests: PGuest[],
+  guests: PGuestWithSeat[],
   items: PTicketItem[],
 ): TicketBundle => ({
   ticket: toTicket(ticket),

@@ -26,6 +26,7 @@ import type {
   SeatInResult,
   ServiceListener,
   SnackRepository,
+  SplitBody,
   SplitResult,
   TicketView,
 } from "../repository";
@@ -128,11 +129,7 @@ export class HttpRepository implements SnackRepository {
   mergeTickets(input: MergeInput): Promise<TicketView> {
     return this.api.request("POST", "/tickets/merge", input);
   }
-  splitTicket(
-    id: string,
-    body:
-      { mode: "ITEMIZED"; guestIds: string[]; itemIds: string[] } | { mode: "EVEN"; parts: number },
-  ): Promise<SplitResult> {
+  splitTicket(id: string, body: SplitBody): Promise<SplitResult> {
     return this.api.request("POST", `/tickets/${id}/split`, body);
   }
   listPayments(ticketId: string): Promise<Payment[]> {

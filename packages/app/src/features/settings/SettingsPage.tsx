@@ -21,6 +21,7 @@ export function SettingsPage(): JSX.Element {
     graceMinutes: 0,
     minChargeMinutes: 0,
     timeRounding: "CEIL_MINUTE" as TimeRounding,
+    hourWarningMinutes: 10,
   });
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -31,6 +32,7 @@ export function SettingsPage(): JSX.Element {
         graceMinutes: settingsQ.data.graceMinutes,
         minChargeMinutes: settingsQ.data.minChargeMinutes,
         timeRounding: settingsQ.data.timeRounding,
+        hourWarningMinutes: settingsQ.data.hourWarningMinutes,
       });
     }
   }, [settingsQ.data]);
@@ -129,6 +131,21 @@ export function SettingsPage(): JSX.Element {
                   value={form.minChargeMinutes}
                   onChange={(e) =>
                     setForm({ ...form, minChargeMinutes: Number(e.target.value) || 0 })
+                  }
+                />
+              </Field>
+              <Field label={t("settings.hourWarning")} hint={t("settings.hourWarningHint")}>
+                <Input
+                  type="number"
+                  min={0}
+                  max={59}
+                  disabled={!isAdmin}
+                  value={form.hourWarningMinutes}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      hourWarningMinutes: Math.min(59, Math.max(0, Number(e.target.value) || 0)),
+                    })
                   }
                 />
               </Field>

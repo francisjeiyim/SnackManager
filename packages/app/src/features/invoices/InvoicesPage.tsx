@@ -95,7 +95,12 @@ export function InvoicesPage(): JSX.Element {
               <div className="mb-1 text-xs uppercase text-slate-400">{t("ticket.guests")}</div>
               {detail.guests.map((g, i) => (
                 <div key={g.id} className="flex justify-between">
-                  <span>{g.displayName ?? `#${i + 1}`}</span>
+                  <span>
+                    {g.displayName ?? `#${i + 1}`}
+                    {g.seatLabel ? (
+                      <span className="ml-1 text-xs text-slate-400">· {g.seatLabel}</span>
+                    ) : null}
+                  </span>
                   <span className="tabular-nums text-slate-500">
                     {g.billedMinutes ?? "—"} min · {yen(g.timeChargeYen ?? 0, locale)}
                   </span>

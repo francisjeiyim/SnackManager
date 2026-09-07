@@ -19,6 +19,7 @@ export const settingsUpdateSchema = z.object({
   timeRounding: z.nativeEnum(TimeRounding).optional(),
   defaultLocale: localeSchema.optional(),
   serviceDayCutoverHour: z.number().int().min(0).max(23).optional(),
+  hourWarningMinutes: z.number().int().min(0).max(59).optional(),
 });
 export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;
 
@@ -131,6 +132,12 @@ export const splitSchema = z.discriminatedUnion("mode", [
     mode: z.literal("EVEN"),
     ticketId: id,
     parts: positiveInt.min(2),
+  }),
+  z.object({
+    mode: z.literal("GROUPS"),
+    ticketId: id,
+    /** Guest ids partitioned into groups; every guest of the ticket exactly once. */
+    groups: z.array(z.array(id).min(1)).min(2),
   }),
 ]);
 export type SplitInputDto = z.infer<typeof splitSchema>;

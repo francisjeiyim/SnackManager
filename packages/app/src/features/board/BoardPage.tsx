@@ -5,7 +5,7 @@ import { Button, Card, Spinner } from "../../components/ui";
 import { cn } from "../../lib/cn";
 import { usePermissions } from "../../lib/permissions";
 import { useRepository } from "../../data/RepositoryContext";
-import { useActiveGuests, useRooms } from "../../data/queries";
+import { useActiveGuests, useRooms, useSettings } from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
 import { SeatInDialog } from "./SeatInDialog";
 import { TicketPanel } from "../ticket/TicketPanel";
@@ -16,6 +16,7 @@ export function BoardPage(): JSX.Element {
   const { canServe } = usePermissions();
   const roomsQ = useRooms();
   const guestsQ = useActiveGuests();
+  const settingsQ = useSettings();
 
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [seatInSeatId, setSeatInSeatId] = useState<string | null | undefined>(undefined);
@@ -88,6 +89,7 @@ export function BoardPage(): JSX.Element {
             <RoomCanvas
               room={room}
               guestsBySeat={guestsBySeat}
+              hourWarningMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
               onSeatClick={(seatId, tId) => {
                 if (tId) setTicketId(tId);
                 else if (canServe) setSeatInSeatId(seatId);

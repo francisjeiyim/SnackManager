@@ -94,6 +94,8 @@
     "split": "分ける",
     "pay": "支払い",
     "print": "レシート印刷",
+    "leave": "退店",
+    "move": "移動",
     "status": {
       "OPEN": "オープン",
       "CLOSED": "クローズ",
@@ -116,10 +118,16 @@
     "change": "おつり",
     "methods": { "CASH": "現金", "CARD": "カード", "MOBILE": "モバイル決済", "OTHER": "その他" }
   },
+  "moveGuest": {
+    "title": "席を移動 / 交換",
+    "current": "現在の席",
+    "free": "空席へ移動",
+    "swapWith": "{{name}} と交換"
+  },
   "merge": {
     "title": "伝票をまとめる",
     "target": "まとめ先",
-    "sources": "まとめる伝票",
+    "sources": "まとめる伝票（1つ以上選択）",
     "confirm": "まとめる"
   },
   "split": {
@@ -127,7 +135,10 @@
     "mode": "分け方",
     "itemized": "項目ごと",
     "even": "均等割り",
+    "groups": "グループ",
+    "group": "グループ",
     "parts": "人数",
+    "assignAll": "各客をグループ番号に割り当ててください（全員必須）",
     "moveGuests": "移す客",
     "moveItems": "移す商品",
     "confirm": "分ける",
@@ -177,6 +188,8 @@
     "ratePerMinute": "1分あたりの料金 (円)",
     "graceMinutes": "無料時間 (分)",
     "minChargeMinutes": "最低課金時間 (分)",
+    "hourWarning": "1時間前の予告 (分)",
+    "hourWarningHint": "毎正時の手前この分数だけ、利用中の席が点滅します。0で無効。",
     "rounding": "端数処理",
     "roundingNone": "切り捨て",
     "roundingCeilMinute": "分単位切り上げ",

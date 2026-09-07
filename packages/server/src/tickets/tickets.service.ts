@@ -12,6 +12,7 @@ import {
   computeTicketTotals,
   planClose,
   planEvenSplit,
+  planGroupedSplit,
   planItemizedSplit,
   planMerge,
   type BillingSettings,
@@ -26,12 +27,19 @@ import { SettingsService } from "../settings/settings.service";
 import { EventsGateway } from "../events/events.gateway";
 import { AuditService } from "../audit/audit.service";
 import { serviceDayOf } from "../common/service-day";
-import { toBillingSettings, toBundle, toTicket } from "../common/mappers";
+import {
+  toBillingSettings,
+  toBundle,
+  toGuest,
+  toPayment,
+  toTicket,
+  toTicketItem,
+} from "../common/mappers";
 
 type Tx = Prisma.TransactionClient;
 
 const withGraph = {
-  guests: { orderBy: { arrivalAt: "asc" } },
+  guests: { orderBy: { arrivalAt: "asc" }, include: { seat: { select: { label: true } } } },
   items: { orderBy: { addedAt: "asc" } },
   payments: { orderBy: { paidAt: "asc" } },
 } satisfies Prisma.TicketInclude;
@@ -93,9 +101,9 @@ export class TicketsService {
     const live = computeTicketTotals(toBundle(ticket, ticket.guests, ticket.items), settings, now);
     return {
       ...toTicket(ticket),
-      guests: ticket.guests,
-      items: ticket.items,
-      payments: ticket.payments,
+      guests: ticket.guests.map(toGuest),
+      items: ticket.items.map(toTicketItem),
+      payments: ticket.payments.map(toPayment),
       live,
     };
   }
@@ -425,6 +433,59 @@ export class TicketsService {
       return { ...plan, ticket };
     }
 
+    if (input.mode === "GROUPS") {
+      const serviceDay = origin.serviceDay;
+      const ticketIds = await this.prisma.$transaction(async (tx) => {
+        const newTicketIds: string[] = [];
+        for (let i = 1; i < input.groups.length; i++) {
+          const c = await tx.ticketCounter.upsert({
+            where: { serviceDay },
+            create: { serviceDay, lastNumber: 1 },
+            update: { lastNumber: { increment: 1 } },
+          });
+          const t = await tx.ticket.create({
+            data: { number: c.lastNumber, serviceDay, splitFromTicketId: origin.id },
+          });
+          newTicketIds.push(t.id);
+        }
+
+        const plan = planGroupedSplit(
+          originBundle,
+          { mode: "GROUPS", groups: input.groups, newTicketIds },
+          settings,
+          now,
+        );
+
+        for (const group of plan.groups) {
+          if (group.ticketId === origin.id) continue;
+          await tx.guest.updateMany({
+            where: { id: { in: group.guestIds } },
+            data: { ticketId: group.ticketId },
+          });
+          if (group.itemIds.length) {
+            await tx.ticketItem.updateMany({
+              where: { id: { in: group.itemIds } },
+              data: { ticketId: group.ticketId },
+            });
+          }
+        }
+        for (const group of plan.groups) await this.recompute(tx, group.ticketId, now);
+        return plan.groups.map((g) => g.ticketId);
+      });
+
+      const tickets = await Promise.all(ticketIds.map((tid) => this.get(tid)));
+      await this.audit.record({
+        action: AuditAction.TICKET_SPLIT,
+        entityType: "ticket",
+        entityId: origin.id,
+        userId,
+        data: { mode: "GROUPS", ticketIds },
+      });
+      for (const tk of tickets) this.events.emitEvent(ServiceEvent.TICKET_UPDATED, tk);
+      this.events.emitEvent(ServiceEvent.TICKET_SPLIT, { mode: "GROUPS", tickets });
+      return { mode: "GROUPS" as const, tickets };
+    }
+
     const serviceDay = origin.serviceDay;
     const result = await this.prisma.$transaction(async (tx) => {
       const c = await tx.ticketCounter.upsert({
@@ -487,6 +548,11 @@ export class TicketsService {
   }
 
   // --- helpers -------------------------------------------------
+
+  /** Recompute + persist a ticket's stored totals (own transaction). */
+  async refreshTotals(ticketId: string): Promise<void> {
+    await this.prisma.$transaction((tx) => this.recompute(tx, ticketId, new Date()));
+  }
 
   /** Recompute + persist a ticket's stored snapshot totals inside a tx. */
   private async recompute(tx: Tx, ticketId: string, now: Date): Promise<void> {

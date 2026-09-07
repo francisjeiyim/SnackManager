@@ -9,7 +9,10 @@ import { PrismaService } from "../prisma/prisma.service";
 import { SettingsService } from "../settings/settings.service";
 import { EventsGateway } from "../events/events.gateway";
 import { AuditService } from "../audit/audit.service";
+import { TicketsService } from "../tickets/tickets.service";
 import { toBillingSettings, toGuest } from "../common/mappers";
+
+const withSeat = { seat: { select: { label: true } } } as const;
 
 @Injectable()
 export class GuestsService {
@@ -18,6 +21,7 @@ export class GuestsService {
     private readonly settings: SettingsService,
     private readonly events: EventsGateway,
     private readonly audit: AuditService,
+    private readonly tickets: TicketsService,
   ) {}
 
   /** Every currently seated guest — the raw material for the live board. */
@@ -25,12 +29,18 @@ export class GuestsService {
     const guests = await this.prisma.guest.findMany({
       where: { status: "SEATED" },
       orderBy: { arrivalAt: "asc" },
+      include: withSeat,
     });
     return guests.map(toGuest);
   }
 
+  /**
+   * Move a guest to another seat. If that seat is held by another seated guest,
+   * the two swap places. Neither `arrivalAt`, `ticketId` nor any billing
+   * snapshot is touched, so chronometers and charges are unaffected.
+   */
   async move(input: MoveGuestInput, userId?: string) {
-    const updated = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const guest = await tx.guest.findUnique({ where: { id: input.guestId } });
       if (!guest) throw new NotFoundException("guest not found");
       if (guest.status !== "SEATED") throw new ConflictException("guest is no longer seated");
@@ -39,15 +49,25 @@ export class GuestsService {
       if (!seat) throw new NotFoundException("target seat not found");
       if (!seat.isActive) throw new ConflictException("target seat is inactive");
 
-      const taken = await tx.guest.findFirst({
+      const occupant = await tx.guest.findFirst({
         where: { seatId: input.toSeatId, status: "SEATED", NOT: { id: input.guestId } },
       });
-      if (taken) throw new ConflictException("target seat is occupied");
 
-      return tx.guest.update({
-        where: { id: input.guestId },
+      const fromSeatId = guest.seatId;
+      const fromRoomId = guest.roomId;
+      await tx.guest.update({
+        where: { id: guest.id },
         data: { seatId: seat.id, roomId: seat.roomId },
       });
+      if (occupant) {
+        await tx.guest.update({
+          where: { id: occupant.id },
+          data: { seatId: fromSeatId, roomId: fromRoomId },
+        });
+      }
+      const ids = occupant ? [guest.id, occupant.id] : [guest.id];
+      const updated = await tx.guest.findMany({ where: { id: { in: ids } }, include: withSeat });
+      return { updated, swapped: !!occupant };
     });
 
     await this.audit.record({
@@ -55,10 +75,12 @@ export class GuestsService {
       entityType: "guest",
       entityId: input.guestId,
       userId,
-      data: { movedTo: input.toSeatId },
+      data: { movedTo: input.toSeatId, swapped: result.swapped },
     });
-    this.events.emitEvent(ServiceEvent.SEAT_UPDATED, toGuest(updated), updated.roomId);
-    return toGuest(updated);
+    for (const g of result.updated) {
+      this.events.emitEvent(ServiceEvent.SEAT_UPDATED, toGuest(g), g.roomId);
+    }
+    return toGuest(result.updated.find((g) => g.id === input.guestId)!);
   }
 
   /** Close a single guest early (they leave before the rest of their party). */
@@ -87,6 +109,8 @@ export class GuestsService {
       });
     });
 
+    if (updated.ticketId) await this.tickets.refreshTotals(updated.ticketId);
+
     await this.audit.record({
       action: AuditAction.SEAT_OUT,
       entityType: "guest",
@@ -96,7 +120,7 @@ export class GuestsService {
     });
     this.events.emitEvent(ServiceEvent.GUEST_CLOSED, toGuest(updated), updated.roomId);
     if (updated.ticketId) {
-      this.events.emitEvent(ServiceEvent.TICKET_UPDATED, { id: updated.ticketId });
+      this.events.emitEvent(ServiceEvent.TICKET_UPDATED, await this.tickets.get(updated.ticketId));
     }
     return toGuest(updated);
   }

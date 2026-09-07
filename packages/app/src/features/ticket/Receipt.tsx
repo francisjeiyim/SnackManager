@@ -40,7 +40,8 @@ export function Receipt({ ticket, locale, shopName = "SnackManager" }: Props): J
         return (
           <div className="row" key={g.id}>
             <span>
-              {g.displayName ?? `#${i + 1}`} · {duration(ms)}
+              {g.displayName ?? `#${i + 1}`}
+              {g.seatLabel ? ` [${g.seatLabel}]` : ""} · {duration(ms)}
             </span>
             <span>{yen(g.timeChargeYen ?? 0, locale)}</span>
           </div>

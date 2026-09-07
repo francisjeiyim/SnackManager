@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TicketStatus } from "../enums.js";
-import { planEvenSplit, planItemizedSplit, planSplit } from "./split.js";
+import { planEvenSplit, planGroupedSplit, planItemizedSplit, planSplit } from "./split.js";
 import { at, bundle, guest, item, settings, ticket } from "./fixtures.js";
 
 const origin = () =>
@@ -120,5 +120,114 @@ describe("planSplit dispatch", () => {
         at(10),
       ).mode,
     ).toBe("ITEMIZED");
+  });
+});
+
+const trio = () =>
+  bundle({
+    ticket: ticket({ id: "t_o" }),
+    guests: [
+      guest({
+        id: "g1",
+        ticketId: "t_o",
+        arrivalAt: "2026-09-07T12:00:00.000Z",
+        ratePerMinuteYenSnapshot: 10,
+      }),
+      guest({
+        id: "g2",
+        ticketId: "t_o",
+        arrivalAt: "2026-09-07T12:00:00.000Z",
+        ratePerMinuteYenSnapshot: 10,
+      }),
+      guest({
+        id: "g3",
+        ticketId: "t_o",
+        arrivalAt: "2026-09-07T12:00:00.000Z",
+        ratePerMinuteYenSnapshot: 10,
+      }),
+    ],
+    items: [
+      item({ id: "i1", ticketId: "t_o", unitPriceYen: 300, quantity: 1, guestId: "g2" }),
+      item({ id: "i2", ticketId: "t_o", unitPriceYen: 500, quantity: 1, guestId: "g3" }),
+      item({ id: "iShared", ticketId: "t_o", unitPriceYen: 900, quantity: 1 }),
+    ],
+  });
+
+describe("planGroupedSplit", () => {
+  const opts = { mode: "GROUPS" as const, newTicketIds: ["t_a", "t_b"] };
+
+  it("partitions guests into groups and routes items by guest", () => {
+    const plan = planGroupedSplit(
+      trio(),
+      { ...opts, groups: [["g1"], ["g2", "g3"]] },
+      settings(),
+      at(10),
+    );
+
+    expect(plan.groups).toHaveLength(2);
+    const [g0, g1] = plan.groups;
+    expect(g0.ticketId).toBe("t_o"); // group 0 keeps the origin
+    expect(g1.ticketId).toBe("t_a");
+    expect(g0.guestIds).toEqual(["g1"]);
+    expect(g1.guestIds).toEqual(["g2", "g3"]);
+
+    // group 0: g1 time (100) + shared item 900 = 1000
+    expect(g0.totals.totalYen).toBe(1000);
+    expect(g0.itemIds).toEqual(["iShared"]);
+    // group 1: g2+g3 time (200) + i1 (300) + i2 (500) = 1000
+    expect(g1.totals.totalYen).toBe(1000);
+    expect(g1.itemIds).toEqual(["i1", "i2"]);
+  });
+
+  it("supports three groups", () => {
+    const plan = planGroupedSplit(
+      trio(),
+      { ...opts, groups: [["g1"], ["g2"], ["g3"]] },
+      settings(),
+      at(10),
+    );
+    expect(plan.groups.map((g) => g.ticketId)).toEqual(["t_o", "t_a", "t_b"]);
+  });
+
+  it("rejects an unassigned guest", () => {
+    expect(() =>
+      planGroupedSplit(trio(), { ...opts, groups: [["g1"], ["g2"]] }, settings(), at(0)),
+    ).toThrow(/every guest must be assigned/);
+  });
+
+  it("rejects a guest placed in two groups", () => {
+    expect(() =>
+      planGroupedSplit(
+        trio(),
+        {
+          ...opts,
+          groups: [
+            ["g1", "g2"],
+            ["g2", "g3"],
+          ],
+        },
+        settings(),
+        at(0),
+      ),
+    ).toThrow(/more than one group/);
+  });
+
+  it("rejects fewer than 2 groups", () => {
+    expect(() =>
+      planGroupedSplit(trio(), { ...opts, groups: [["g1", "g2", "g3"]] }, settings(), at(0)),
+    ).toThrow(/at least 2 groups/);
+  });
+
+  it("rejects a group that holds every guest", () => {
+    expect(() =>
+      planGroupedSplit(trio(), { ...opts, groups: [["g1", "g2", "g3"], []] }, settings(), at(0)),
+    ).toThrow();
+  });
+
+  it("refuses a non-open ticket", () => {
+    const closed = { ...trio(), ticket: ticket({ id: "t_o", status: TicketStatus.CLOSED }) };
+    expect(() =>
+      planGroupedSplit(closed, { ...opts, groups: [["g1"], ["g2", "g3"]] }, settings(), at(0)),
+    ).toThrow(/cannot split/);
   });
 });

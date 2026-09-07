@@ -12,12 +12,19 @@ import { storedLocale } from "../../i18n";
 import { useNow } from "../../lib/useNow";
 import { usePermissions } from "../../lib/permissions";
 import { printReceipt } from "../../lib/printReceipt";
-import { useCloseTicket, useSettings, useTicket, useVoidItem } from "../../data/queries";
+import {
+  useCloseTicket,
+  useSeatOutGuest,
+  useSettings,
+  useTicket,
+  useVoidItem,
+} from "../../data/queries";
 import type { TicketView } from "../../data/repository";
 import { PosGridModal } from "./PosGridModal";
 import { PayModal } from "./PayModal";
 import { MergeModal } from "./MergeModal";
 import { SplitModal } from "./SplitModal";
+import { MoveGuestModal } from "./MoveGuestModal";
 
 const statusTone = {
   OPEN: "emerald",
@@ -41,8 +48,10 @@ export function TicketPanel({
   const settingsQ = useSettings();
   const closeTicket = useCloseTicket();
   const voidItem = useVoidItem(ticketId);
+  const seatOut = useSeatOutGuest();
 
   const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split" | "close">(null);
+  const [moveGuest, setMoveGuest] = useState<TicketView["guests"][number] | null>(null);
 
   if (ticketQ.isLoading || settingsQ.isLoading) {
     return (
@@ -86,6 +95,7 @@ export function TicketPanel({
           <ul className="space-y-1">
             {ticket.guests.map((g, i) => {
               const charge = computeGuestCharge(g, settings, now);
+              const seated = g.status === "SEATED";
               const ms =
                 g.status === "CLOSED" && g.closedAt
                   ? elapsedMs(new Date(g.arrivalAt), new Date(g.closedAt))
@@ -93,15 +103,41 @@ export function TicketPanel({
               return (
                 <li
                   key={g.id}
-                  className="flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm"
+                  className={`rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm ${
+                    seated ? "" : "opacity-60"
+                  }`}
                 >
-                  <span className="text-slate-700">{g.displayName ?? `#${i + 1}`}</span>
-                  <span className="flex items-center gap-3 tabular-nums text-slate-500">
-                    <span>{duration(ms)}</span>
-                    <span className="font-medium text-slate-700">
-                      {yen(charge.timeChargeYen, locale)}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-700">
+                      {g.displayName ?? `#${i + 1}`}
+                      {g.seatLabel ? (
+                        <span className="ml-1.5 text-xs text-slate-400">· {g.seatLabel}</span>
+                      ) : null}
                     </span>
-                  </span>
+                    <span className="flex items-center gap-3 tabular-nums text-slate-500">
+                      <span>{duration(ms)}</span>
+                      <span className="font-medium text-slate-700">
+                        {yen(charge.timeChargeYen, locale)}
+                      </span>
+                    </span>
+                  </div>
+                  {isOpen && seated && perms.canServe ? (
+                    <div className="mt-1 flex gap-2">
+                      <button
+                        className="text-xs text-slate-500 hover:text-slate-800 hover:underline"
+                        onClick={() => setMoveGuest(g)}
+                      >
+                        {t("ticket.move")}
+                      </button>
+                      <button
+                        className="text-xs text-rose-500 hover:underline"
+                        disabled={seatOut.isPending}
+                        onClick={() => seatOut.mutate(g.id)}
+                      >
+                        {t("ticket.leave")}
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -221,6 +257,7 @@ export function TicketPanel({
       {modal === "split" ? (
         <SplitModal ticket={ticket} onClose={() => setModal(null)} onDone={() => setModal(null)} />
       ) : null}
+      {moveGuest ? <MoveGuestModal guest={moveGuest} onClose={() => setMoveGuest(null)} /> : null}
     </Card>
   );
 }

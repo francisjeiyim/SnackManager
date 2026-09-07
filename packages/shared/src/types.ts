@@ -34,6 +34,11 @@ export interface Settings {
   defaultLocale: Locale;
   /** Hour (0–23, local) at which the "service day" rolls over for ticket numbering. */
   serviceDayCutoverHour: number;
+  /**
+   * Minutes before each full hour during which an occupied seat blinks on the
+   * board (e.g. 10 → blink from 50→60 min, 110→120, …). `0` disables it.
+   */
+  hourWarningMinutes: number;
   updatedAt: IsoDateTime;
 }
 
@@ -81,6 +86,8 @@ export interface Guest {
   timeChargeYen: Yen | null;
   ticketId: string | null;
   status: GuestStatus;
+  /** Derived from the seat (not persisted on the guest). */
+  seatLabel?: string | null;
 }
 
 export interface Product {
@@ -214,7 +221,19 @@ export interface EvenSplitPlan {
   total: Yen;
 }
 
-export type SplitPlan = ItemizedSplitPlan | EvenSplitPlan;
+export interface GroupedSplitPlan {
+  mode: "GROUPS";
+  originTicketId: string;
+  /** One entry per group. Group 0 keeps the origin ticket; the rest are new. */
+  groups: Array<{
+    ticketId: string;
+    guestIds: string[];
+    itemIds: string[];
+    totals: TicketTotals;
+  }>;
+}
+
+export type SplitPlan = ItemizedSplitPlan | EvenSplitPlan | GroupedSplitPlan;
 
 export interface ClosePlan {
   ticketId: string;

@@ -3,6 +3,7 @@ import {
   computeTicketTotals,
   planClose,
   planEvenSplit,
+  planGroupedSplit,
   planItemizedSplit,
   planMerge,
   BillingError,
@@ -47,6 +48,9 @@ import {
 const uuid = (): string => crypto.randomUUID();
 const nowIso = (): string => new Date().toISOString();
 const CHANNEL = "snackmanager-service";
+
+/** Guest columns + the seat label (derived, not a Guest column). */
+const GUEST_SELECT = `SELECT g.*, s."label" AS "seatLabel" FROM "Guest" g LEFT JOIN "Seat" s ON s."id" = g."seatId"`;
 
 async function sha256(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -94,7 +98,7 @@ export class SqliteRepository implements SnackRepository {
     return {
       ticket: toTicket(ticket),
       guests: db
-        .all(`SELECT * FROM "Guest" WHERE "ticketId"=? ORDER BY "arrivalAt"`, [ticketId])
+        .all(`${GUEST_SELECT} WHERE g."ticketId"=? ORDER BY g."arrivalAt"`, [ticketId])
         .map(toGuest),
       items: db
         .all(`SELECT * FROM "TicketItem" WHERE "ticketId"=? ORDER BY "addedAt"`, [ticketId])
@@ -308,9 +312,7 @@ export class SqliteRepository implements SnackRepository {
 
   async activeGuests() {
     const db = await this.ready;
-    return db
-      .all(`SELECT * FROM "Guest" WHERE "status"='SEATED' ORDER BY "arrivalAt"`)
-      .map(toGuest);
+    return db.all(`${GUEST_SELECT} WHERE g."status"='SEATED' ORDER BY g."arrivalAt"`).map(toGuest);
   }
 
   async seatIn(input: SeatInInput): Promise<SeatInResult> {
@@ -400,28 +402,54 @@ export class SqliteRepository implements SnackRepository {
     return { partyId: out.partyId, tickets };
   }
 
+  /**
+   * Move a guest to another seat; if that seat is taken, the two guests swap.
+   * `arrivalAt`, `ticketId` and billing snapshots are untouched, so chronometers
+   * and charges are unaffected.
+   */
   async moveGuest(guestId: string, toSeatId: string) {
     const db = await this.ready;
-    const seat = db.get<{ id: string; roomId: string; isActive: number }>(
-      `SELECT "id","roomId","isActive" FROM "Seat" WHERE "id"=?`,
-      [toSeatId],
-    );
-    if (!seat) throw new BillingError("target seat not found", "NOT_FOUND");
-    if (!seat.isActive) throw new BillingError("target seat is inactive", "SEAT_INACTIVE");
-    const taken = db.get(
-      `SELECT 1 AS x FROM "Guest" WHERE "seatId"=? AND "status"='SEATED' AND "id"<>?`,
-      [toSeatId, guestId],
-    );
-    if (taken) throw new BillingError("target seat is occupied", "SEAT_OCCUPIED");
-    db.run(`UPDATE "Guest" SET "seatId"=?,"roomId"=?,"updatedAt"=? WHERE "id"=?`, [
-      toSeatId,
-      seat.roomId,
-      nowIso(),
-      guestId,
-    ]);
-    const guest = toGuest(db.get(`SELECT * FROM "Guest" WHERE "id"=?`, [guestId]) ?? {});
-    this.emit("seat.updated", guest);
-    return guest;
+    const ids = db.tx(() => {
+      const guest = db.get<{ id: string; seatId: string; roomId: string; status: string }>(
+        `SELECT "id","seatId","roomId","status" FROM "Guest" WHERE "id"=?`,
+        [guestId],
+      );
+      if (!guest) throw new BillingError("guest not found", "NOT_FOUND");
+      if (guest.status !== "SEATED")
+        throw new BillingError("guest is no longer seated", "GUEST_CLOSED");
+
+      const seat = db.get<{ id: string; roomId: string; isActive: number }>(
+        `SELECT "id","roomId","isActive" FROM "Seat" WHERE "id"=?`,
+        [toSeatId],
+      );
+      if (!seat) throw new BillingError("target seat not found", "NOT_FOUND");
+      if (!seat.isActive) throw new BillingError("target seat is inactive", "SEAT_INACTIVE");
+
+      const occupant = db.get<{ id: string }>(
+        `SELECT "id" FROM "Guest" WHERE "seatId"=? AND "status"='SEATED' AND "id"<>?`,
+        [toSeatId, guestId],
+      );
+
+      db.run(`UPDATE "Guest" SET "seatId"=?,"roomId"=?,"updatedAt"=? WHERE "id"=?`, [
+        seat.id,
+        seat.roomId,
+        nowIso(),
+        guestId,
+      ]);
+      if (occupant) {
+        db.run(`UPDATE "Guest" SET "seatId"=?,"roomId"=?,"updatedAt"=? WHERE "id"=?`, [
+          guest.seatId,
+          guest.roomId,
+          nowIso(),
+          occupant.id,
+        ]);
+      }
+      return occupant ? [guestId, occupant.id] : [guestId];
+    });
+
+    const rows = db.all(`${GUEST_SELECT} WHERE g."id" IN (${ids.map(() => "?").join(",")})`, ids);
+    for (const r of rows) this.emit("seat.updated", toGuest(r));
+    return toGuest(rows.find((r) => r.id === guestId) ?? {});
   }
 
   async seatOutGuest(guestId: string) {
@@ -438,7 +466,7 @@ export class SqliteRepository implements SnackRepository {
       [at, charge.billedMinutes, charge.timeChargeYen, at, guestId],
     );
     if (guest.ticketId) this.recompute(db, guest.ticketId, settings);
-    const updated = toGuest(db.get(`SELECT * FROM "Guest" WHERE "id"=?`, [guestId]) ?? {});
+    const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
     this.emit("guest.closed", updated);
     if (guest.ticketId) this.emit("ticket.updated", this.present(db, guest.ticketId, settings));
     return updated;
@@ -641,7 +669,9 @@ export class SqliteRepository implements SnackRepository {
   async splitTicket(
     id: string,
     body:
-      { mode: "ITEMIZED"; guestIds: string[]; itemIds: string[] } | { mode: "EVEN"; parts: number },
+      | { mode: "ITEMIZED"; guestIds: string[]; itemIds: string[] }
+      | { mode: "EVEN"; parts: number }
+      | { mode: "GROUPS"; groups: string[][] },
   ): Promise<SplitResult> {
     const db = await this.ready;
     const settings = await this.settings();
@@ -653,6 +683,60 @@ export class SqliteRepository implements SnackRepository {
       const ticket = this.present(db, id, settings);
       this.emit("ticket.split", { mode: "EVEN", plan, ticket });
       return { ...plan, ticket } as unknown as SplitResult;
+    }
+
+    if (body.mode === "GROUPS") {
+      const serviceDay =
+        db.get<{ serviceDay: string }>(`SELECT "serviceDay" FROM "Ticket" WHERE "id"=?`, [id])
+          ?.serviceDay ?? "";
+      const ticketIds = db.tx(() => {
+        const newTicketIds: string[] = [];
+        for (let i = 1; i < body.groups.length; i++) {
+          const newId = uuid();
+          db.run(
+            `INSERT INTO "Ticket" ("id","number","serviceDay","status","openedAt","splitFromTicketId","createdAt","updatedAt")
+             VALUES (?,?,?,'OPEN',?,?,?,?)`,
+            [newId, this.allocNumber(db, serviceDay), serviceDay, nowIso(), id, nowIso(), nowIso()],
+          );
+          newTicketIds.push(newId);
+        }
+        const plan = planGroupedSplit(
+          origin,
+          { mode: "GROUPS", groups: body.groups, newTicketIds },
+          settings,
+          new Date(),
+        );
+        for (const group of plan.groups) {
+          if (group.ticketId === id) continue;
+          if (group.guestIds.length) {
+            db.run(
+              `UPDATE "Guest" SET "ticketId"=?,"updatedAt"=? WHERE "id" IN (${group.guestIds
+                .map(() => "?")
+                .join(",")})`,
+              [group.ticketId, nowIso(), ...group.guestIds],
+            );
+          }
+          if (group.itemIds.length) {
+            db.run(
+              `UPDATE "TicketItem" SET "ticketId"=? WHERE "id" IN (${group.itemIds
+                .map(() => "?")
+                .join(",")})`,
+              [group.ticketId, ...group.itemIds],
+            );
+          }
+        }
+        for (const group of plan.groups) this.recompute(db, group.ticketId, settings);
+        this.audit(db, "TICKET_SPLIT", "ticket", id, {
+          mode: "GROUPS",
+          ticketIds: plan.groups.map((g) => g.ticketId),
+        });
+        return plan.groups.map((g) => g.ticketId);
+      });
+
+      const tickets = ticketIds.map((tid) => this.present(db, tid, settings));
+      for (const tk of tickets) this.emit("ticket.updated", tk);
+      this.emit("ticket.split", { mode: "GROUPS", tickets });
+      return { mode: "GROUPS", tickets };
     }
 
     const originRow = db.get<{ serviceDay: string }>(

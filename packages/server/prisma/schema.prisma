@@ -74,6 +74,7 @@ model Settings {
   timeRounding            TimeRounding @default(CEIL_MINUTE)
   defaultLocale           Locale       @default(ja)
   serviceDayCutoverHour   Int          @default(5)
+  hourWarningMinutes      Int          @default(10)
   updatedAt               DateTime     @updatedAt
 }
 

@@ -13,6 +13,7 @@ import type {
   UserCreateInput,
 } from "@snackmanager/shared";
 import { useRepository } from "./RepositoryContext";
+import type { SplitBody } from "./repository";
 
 export const keys = {
   settings: ["settings"] as const,
@@ -156,11 +157,17 @@ export function useSplitTicket(ticketId: string) {
   const repo = useRepository();
   const invalidate = useInvalidateService();
   return useMutation({
-    mutationFn: (
-      body:
-        | { mode: "ITEMIZED"; guestIds: string[]; itemIds: string[] }
-        | { mode: "EVEN"; parts: number },
-    ) => repo.splitTicket(ticketId, body),
+    mutationFn: (body: SplitBody) => repo.splitTicket(ticketId, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useMoveGuest() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (vars: { guestId: string; toSeatId: string }) =>
+      repo.moveGuest(vars.guestId, vars.toSeatId),
     onSuccess: invalidate,
   });
 }

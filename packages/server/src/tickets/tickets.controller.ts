@@ -32,6 +32,10 @@ const splitBody = z.discriminatedUnion("mode", [
     itemIds: z.array(z.string()).default([]),
   }),
   z.object({ mode: z.literal("EVEN"), parts: z.number().int().min(2) }),
+  z.object({
+    mode: z.literal("GROUPS"),
+    groups: z.array(z.array(z.string().min(1)).min(1)).min(2),
+  }),
 ]);
 
 const closeBody = z.object({ closedAt: z.string().datetime().optional() });

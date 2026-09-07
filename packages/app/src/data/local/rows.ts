@@ -28,6 +28,7 @@ export const toSettings = (r: Row): Settings => ({
   timeRounding: s(r.timeRounding) as Settings["timeRounding"],
   defaultLocale: s(r.defaultLocale) as Settings["defaultLocale"],
   serviceDayCutoverHour: n(r.serviceDayCutoverHour),
+  hourWarningMinutes: n(r.hourWarningMinutes),
   updatedAt: s(r.updatedAt),
 });
 
@@ -86,6 +87,7 @@ export const toGuest = (r: Row): Guest => ({
   timeChargeYen: nn(r.timeChargeYen),
   ticketId: sn(r.ticketId),
   status: s(r.status) as Guest["status"],
+  seatLabel: sn(r.seatLabel),
 });
 
 export const toItem = (r: Row): TicketItem => ({

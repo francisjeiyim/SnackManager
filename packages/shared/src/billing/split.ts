@@ -3,6 +3,7 @@ import { splitEven } from "../money.js";
 import type {
   BillingSettings,
   EvenSplitPlan,
+  GroupedSplitPlan,
   Instant,
   ItemizedSplitPlan,
   TicketBundle,
@@ -24,7 +25,15 @@ export interface EvenSplitInput {
   parts: number;
 }
 
-export type SplitInput = ItemizedSplitInput | EvenSplitInput;
+export interface GroupedSplitInput {
+  mode: "GROUPS";
+  /** Guest ids partitioned into groups. */
+  groups: string[][];
+  /** Ids for the tickets of groups 1..n (group 0 keeps the origin ticket). */
+  newTicketIds: string[];
+}
+
+export type SplitInput = ItemizedSplitInput | EvenSplitInput | GroupedSplitInput;
 
 /** Divide `origin`'s current total into `parts` equal payment shares. */
 export function planEvenSplit(
@@ -107,13 +116,90 @@ export function planItemizedSplit(
   };
 }
 
+/**
+ * Partition the ticket's guests into groups. Group 0 keeps the origin ticket;
+ * each other group becomes a new ticket carrying its guests and the items
+ * attributed to those guests. Unattributed (shared) items stay on group 0.
+ */
+export function planGroupedSplit(
+  origin: TicketBundle,
+  input: GroupedSplitInput,
+  settings: BillingSettings,
+  now: Instant,
+): GroupedSplitPlan {
+  if (origin.ticket.status !== TicketStatus.OPEN) {
+    throw new BillingError(
+      `ticket ${origin.ticket.id} is ${origin.ticket.status}, cannot split`,
+      "TICKET_NOT_OPEN",
+    );
+  }
+  if (input.groups.length < 2) {
+    throw new BillingError("a grouped split needs at least 2 groups", "BAD_GROUPS");
+  }
+  if (input.newTicketIds.length < input.groups.length - 1) {
+    throw new BillingError("not enough ticket ids for the groups", "BAD_GROUPS");
+  }
+
+  const ticketGuestIds = new Set(origin.guests.map((g) => g.id));
+  const assigned = new Set<string>();
+  for (const group of input.groups) {
+    if (group.length === 0) {
+      throw new BillingError("a group is empty", "EMPTY_GROUP");
+    }
+    for (const gid of group) {
+      if (!ticketGuestIds.has(gid)) {
+        throw new BillingError(
+          `guest ${gid} is not on ticket ${origin.ticket.id}`,
+          "GUEST_NOT_ON_TICKET",
+        );
+      }
+      if (assigned.has(gid)) {
+        throw new BillingError(`guest ${gid} is in more than one group`, "GUEST_IN_TWO_GROUPS");
+      }
+      assigned.add(gid);
+    }
+  }
+  if (assigned.size !== ticketGuestIds.size) {
+    throw new BillingError("every guest must be assigned to a group", "GUEST_UNASSIGNED");
+  }
+  if (input.groups.some((g) => g.length === origin.guests.length)) {
+    throw new BillingError("one group holds every guest — nothing to split", "FULL_GROUP");
+  }
+
+  const groups = input.groups.map((guestIdList, index) => {
+    const guestSet = new Set(guestIdList);
+    const ticketId = index === 0 ? origin.ticket.id : input.newTicketIds[index - 1]!;
+    // Items follow their guest; shared items (no guestId) stay on group 0.
+    const items = origin.items.filter((it) =>
+      it.guestId != null ? guestSet.has(it.guestId) : index === 0,
+    );
+    const bundle: TicketBundle = {
+      ticket: {
+        ...origin.ticket,
+        id: ticketId,
+        discountYen: index === 0 ? origin.ticket.discountYen : 0,
+      },
+      guests: origin.guests.filter((g) => guestSet.has(g.id)),
+      items,
+    };
+    return {
+      ticketId,
+      guestIds: [...guestSet],
+      itemIds: items.map((it) => it.id),
+      totals: computeTicketTotals(bundle, settings, now),
+    };
+  });
+
+  return { mode: "GROUPS", originTicketId: origin.ticket.id, groups };
+}
+
 export function planSplit(
   origin: TicketBundle,
   input: SplitInput,
   settings: BillingSettings,
   now: Instant,
-): ItemizedSplitPlan | EvenSplitPlan {
-  return input.mode === "EVEN"
-    ? planEvenSplit(origin, input, settings, now)
-    : planItemizedSplit(origin, input, settings, now);
+): ItemizedSplitPlan | EvenSplitPlan | GroupedSplitPlan {
+  if (input.mode === "EVEN") return planEvenSplit(origin, input, settings, now);
+  if (input.mode === "GROUPS") return planGroupedSplit(origin, input, settings, now);
+  return planItemizedSplit(origin, input, settings, now);
 }

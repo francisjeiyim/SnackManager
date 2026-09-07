@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS "Settings" (
   "timeRounding" TEXT NOT NULL DEFAULT 'CEIL_MINUTE',
   "defaultLocale" TEXT NOT NULL DEFAULT 'ja',
   "serviceDayCutoverHour" INTEGER NOT NULL DEFAULT 5,
+  "hourWarningMinutes" INTEGER NOT NULL DEFAULT 10,
   "updatedAt" TEXT NOT NULL
 );
 

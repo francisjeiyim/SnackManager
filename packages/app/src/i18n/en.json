@@ -94,6 +94,8 @@
     "split": "Split",
     "pay": "Pay",
     "print": "Print receipt",
+    "leave": "Leave",
+    "move": "Move",
     "status": { "OPEN": "Open", "CLOSED": "Closed", "PAID": "Paid", "VOID": "Void" },
     "empty": "Select a ticket"
   },
@@ -111,10 +113,16 @@
     "change": "Change",
     "methods": { "CASH": "Cash", "CARD": "Card", "MOBILE": "Mobile", "OTHER": "Other" }
   },
+  "moveGuest": {
+    "title": "Move / swap seat",
+    "current": "Current seat",
+    "free": "Move here",
+    "swapWith": "Swap with {{name}}"
+  },
   "merge": {
     "title": "Merge tickets",
     "target": "Keep",
-    "sources": "Merge in",
+    "sources": "Merge in (pick one or more)",
     "confirm": "Merge"
   },
   "split": {
@@ -122,7 +130,10 @@
     "mode": "Mode",
     "itemized": "By item",
     "even": "Even shares",
+    "groups": "Groups",
+    "group": "Group",
     "parts": "Parts",
+    "assignAll": "Put each guest in a group (all must be assigned)",
     "moveGuests": "Move guests",
     "moveItems": "Move items",
     "confirm": "Split",
@@ -172,6 +183,8 @@
     "ratePerMinute": "Rate per minute (¥)",
     "graceMinutes": "Grace minutes",
     "minChargeMinutes": "Minimum charged minutes",
+    "hourWarning": "Hour warning (min)",
+    "hourWarningHint": "Occupied seats blink for this many minutes before each full hour. 0 disables it.",
     "rounding": "Rounding",
     "roundingNone": "Truncate",
     "roundingCeilMinute": "Ceil to minute",

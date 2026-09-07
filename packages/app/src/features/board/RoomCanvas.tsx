@@ -11,18 +11,29 @@ const OVERTIME_MIN = 120;
 interface Props {
   room: RoomWithSeats;
   guestsBySeat: Map<string, Guest[]>;
+  /** Minutes before each full hour during which an occupied seat blinks. 0 = off. */
+  hourWarningMinutes: number;
   onSeatClick: (seatId: string, ticketId: string | null) => void;
 }
 
-export function RoomCanvas({ room, guestsBySeat, onSeatClick }: Props): JSX.Element {
+export function RoomCanvas({
+  room,
+  guestsBySeat,
+  hourWarningMinutes,
+  onSeatClick,
+}: Props): JSX.Element {
   const { t } = useTranslation();
   const now = useNow(1000);
   const scale = Math.min(1, 880 / room.width);
 
   return (
     <div
-      className="relative rounded-xl border border-slate-200 bg-white"
-      style={{ width: room.width * scale, height: room.height * scale }}
+      className="relative rounded-xl border border-slate-200"
+      style={{
+        width: room.width * scale,
+        height: room.height * scale,
+        background: room.background ?? "#ffffff",
+      }}
     >
       {room.seats.map((seat) => {
         const guests = guestsBySeat.get(seat.id) ?? [];
@@ -30,6 +41,12 @@ export function RoomCanvas({ room, guestsBySeat, onSeatClick }: Props): JSX.Elem
         const earliest = occupied ? Math.min(...guests.map((g) => Date.parse(g.arrivalAt))) : 0;
         const mins = occupied ? elapsedMs(new Date(earliest), now) / 60_000 : 0;
         const overtime = mins >= OVERTIME_MIN;
+        const intoHour = mins % 60;
+        const nearHour =
+          occupied &&
+          hourWarningMinutes > 0 &&
+          mins >= 60 - hourWarningMinutes &&
+          intoHour >= 60 - hourWarningMinutes;
         const ticketId = guests[0]?.ticketId ?? null;
 
         return (
@@ -44,6 +61,7 @@ export function RoomCanvas({ room, guestsBySeat, onSeatClick }: Props): JSX.Elem
               !occupied && "border-slate-300 bg-slate-50 text-slate-500 hover:bg-slate-100",
               occupied && !overtime && "border-emerald-500 bg-emerald-50 text-emerald-700",
               occupied && overtime && "border-amber-500 bg-amber-50 text-amber-700",
+              nearHour && "sm-blink",
             )}
             style={{
               left: seat.x * scale,

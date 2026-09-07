@@ -200,6 +200,96 @@ describe("SnackManager billing flow (e2e)", () => {
     ).expect(409);
   });
 
+  it("splits a ticket by guest groups into new tickets", async () => {
+    const { seats, products } = ctx.seed;
+    const { tickets } = await seatIn([seats[0].id, seats[1].id, seats[2].id]);
+    const ticketId = tickets[0].id;
+    await addItem(ticketId, products.beer.id, 1); // shared, no guestId
+
+    const full = await auth(request(app.getHttpServer()).get(`/api/tickets/${ticketId}`)).expect(
+      200,
+    );
+    const [g1, g2, g3] = full.body.guests as Array<{ id: string }>;
+
+    const res = await auth(
+      request(app.getHttpServer())
+        .post(`/api/tickets/${ticketId}/split`)
+        .send({ mode: "GROUPS", groups: [[g1.id], [g2.id, g3.id]] }),
+    ).expect(201);
+
+    expect(res.body.mode).toBe("GROUPS");
+    expect(res.body.tickets).toHaveLength(2);
+    expect(res.body.tickets[0].id).toBe(ticketId); // group 0 keeps the origin
+    expect(res.body.tickets[0].guests).toHaveLength(1);
+    expect(res.body.tickets[1].guests).toHaveLength(2);
+    expect(res.body.tickets[1].splitFromTicketId).toBe(ticketId);
+    // shared beer stayed with group 0
+    expect(res.body.tickets[0].items).toHaveLength(1);
+    expect(res.body.tickets[1].items).toHaveLength(0);
+
+    // seats untouched — everyone still seated
+    const active = await auth(request(app.getHttpServer()).get("/api/guests/active")).expect(200);
+    expect(active.body).toHaveLength(3);
+  });
+
+  it("swaps two guests' seats without touching their timers", async () => {
+    const { seats } = ctx.seed;
+    const a = await seatIn([seats[0].id]);
+    const b = await seatIn([seats[1].id]);
+    const ga = (
+      await auth(request(app.getHttpServer()).get(`/api/tickets/${a.tickets[0].id}`)).expect(200)
+    ).body.guests[0];
+    const gb = (
+      await auth(request(app.getHttpServer()).get(`/api/tickets/${b.tickets[0].id}`)).expect(200)
+    ).body.guests[0];
+
+    await auth(
+      request(app.getHttpServer())
+        .patch(`/api/guests/${ga.id}/move`)
+        .send({ toSeatId: seats[1].id }),
+    ).expect(200);
+
+    const rows = await ctx.prisma.guest.findMany({ where: { id: { in: [ga.id, gb.id] } } });
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+    expect(byId[ga.id].seatId).toBe(seats[1].id);
+    expect(byId[gb.id].seatId).toBe(seats[0].id);
+    expect(byId[ga.id].arrivalAt.toISOString()).toBe(ga.arrivalAt);
+    expect(byId[gb.id].arrivalAt.toISOString()).toBe(gb.arrivalAt);
+  });
+
+  it("lets one guest leave a shared ticket early", async () => {
+    const { seats } = ctx.seed;
+    const { tickets } = await seatIn([seats[0].id, seats[1].id]);
+    const ticketId = tickets[0].id;
+    const full = await auth(request(app.getHttpServer()).get(`/api/tickets/${ticketId}`)).expect(
+      200,
+    );
+    const [g1, g2] = full.body.guests as Array<{ id: string }>;
+
+    await auth(request(app.getHttpServer()).post(`/api/guests/${g1.id}/seat-out`)).expect(201);
+
+    const g1Row = await ctx.prisma.guest.findUniqueOrThrow({ where: { id: g1.id } });
+    expect(g1Row.status).toBe("CLOSED");
+    expect(g1Row.billedMinutes).not.toBeNull();
+
+    // ticket still open, g2 still running, g1's seat free
+    const after = await auth(request(app.getHttpServer()).get(`/api/tickets/${ticketId}`)).expect(
+      200,
+    );
+    expect(after.body.status).toBe("OPEN");
+    const active = await auth(request(app.getHttpServer()).get("/api/guests/active")).expect(200);
+    expect(active.body.map((g: { id: string }) => g.id)).toEqual([g2.id]);
+  });
+
+  it("puts the seat label on each guest of a ticket", async () => {
+    const { seats } = ctx.seed;
+    const { tickets } = await seatIn([seats[0].id]);
+    const full = await auth(
+      request(app.getHttpServer()).get(`/api/tickets/${tickets[0].id}`),
+    ).expect(200);
+    expect(full.body.guests[0].seatLabel).toBe(seats[0].label);
+  });
+
   it("enforces role permissions (SERVER cannot close)", async () => {
     const { seats } = ctx.seed;
     await ctx.prisma.user.create({

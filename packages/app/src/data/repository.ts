@@ -53,7 +53,18 @@ export interface ItemizedSplitResult {
   newTicket: TicketView;
 }
 
-export type SplitResult = EvenSplitResult | ItemizedSplitResult;
+export interface GroupedSplitResult {
+  mode: "GROUPS";
+  /** Origin ticket first, then one per new group. */
+  tickets: TicketView[];
+}
+
+export type SplitResult = EvenSplitResult | ItemizedSplitResult | GroupedSplitResult;
+
+export type SplitBody =
+  | { mode: "ITEMIZED"; guestIds: string[]; itemIds: string[] }
+  | { mode: "EVEN"; parts: number }
+  | { mode: "GROUPS"; groups: string[][] };
 
 export interface PaymentResult {
   ticketId: string;
@@ -103,11 +114,7 @@ export interface SnackRepository {
   patchTicket(id: string, body: TicketPatchInput): Promise<TicketView>;
   closeTicket(id: string, closedAt?: string): Promise<TicketView>;
   mergeTickets(input: MergeInput): Promise<TicketView>;
-  splitTicket(
-    id: string,
-    body:
-      { mode: "ITEMIZED"; guestIds: string[]; itemIds: string[] } | { mode: "EVEN"; parts: number },
-  ): Promise<SplitResult>;
+  splitTicket(id: string, body: SplitBody): Promise<SplitResult>;
   listPayments(ticketId: string): Promise<Payment[]>;
   takePayment(ticketId: string, body: Omit<PaymentInput, "ticketId">): Promise<PaymentResult>;
 
