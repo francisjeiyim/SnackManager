@@ -66,7 +66,14 @@ pnpm build
   (live per-guest timers + charges, POS grid, void, close, merge, split, pay), products admin,
   invoices history + detail, settings (mode / server URL / billing / locale / staff). Whole
   login → seat-in → order → close → pay → invoices flow verified in-browser.
-- **Next — Phase 4**: graphical room-layout editor (drag / resize / rotate seats, permanent vs
-  dynamic, multi-room), then Phase 5 standalone (in-browser SQLite) mode.
+- **Phase 4 — room-layout editor** (`packages/app` → `/rooms`): done. Canvas with pointer-driven
+  drag / resize / rotate (grid-snapped), a per-seat properties panel (label, kind PERMANENT ·
+  DYNAMIC, shape, geometry, active), add permanent / dynamic seats, multi-room tabs, add room,
+  room settings (name, size, background colour), delete seat / room. Local edits show an
+  "unsaved" badge and persist through `PATCH /seats/bulk`; verified in-browser (move → save →
+  reload keeps position; add/delete dynamic seat).
+- **Next — Phase 5**: standalone (in-browser SQLite / OPFS) mode — a `SqliteRepository`
+  implementing the same interface with the shared billing engine, plus mode switch and
+  local backup/restore.
 
 Full plan in `docs/` and the approved plan file.

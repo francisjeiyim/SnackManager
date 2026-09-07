@@ -4,7 +4,10 @@ import type {
   MergeInput,
   PaymentInput,
   ProductInput,
+  RoomInput,
   SeatInInput,
+  SeatInput,
+  SeatPatch,
   SettingsUpdateInput,
   TicketPatchInput,
   UserCreateInput,
@@ -208,4 +211,39 @@ export function useCreateUser() {
     mutationFn: (input: UserCreateInput) => repo.createUser(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
   });
+}
+
+/** Room + seat CRUD for the layout editor. */
+export function useLayoutMutations() {
+  const repo = useRepository();
+  const qc = useQueryClient();
+  const invalidate = (): Promise<void> => qc.invalidateQueries({ queryKey: keys.rooms });
+  return {
+    createRoom: useMutation({
+      mutationFn: (input: RoomInput) => repo.createRoom(input),
+      onSuccess: invalidate,
+    }),
+    updateRoom: useMutation({
+      mutationFn: (vars: { id: string; patch: Partial<RoomInput> }) =>
+        repo.updateRoom(vars.id, vars.patch),
+      onSuccess: invalidate,
+    }),
+    deleteRoom: useMutation({
+      mutationFn: (id: string) => repo.deleteRoom(id),
+      onSuccess: invalidate,
+    }),
+    createSeat: useMutation({
+      mutationFn: (input: SeatInput) => repo.createSeat(input),
+      onSuccess: invalidate,
+    }),
+    bulkUpdateSeats: useMutation({
+      mutationFn: (vars: { roomId: string; seats: Array<{ id: string } & SeatPatch> }) =>
+        repo.bulkUpdateSeats(vars.roomId, vars.seats),
+      onSuccess: invalidate,
+    }),
+    deleteSeat: useMutation({
+      mutationFn: (id: string) => repo.deleteSeat(id),
+      onSuccess: invalidate,
+    }),
+  };
 }

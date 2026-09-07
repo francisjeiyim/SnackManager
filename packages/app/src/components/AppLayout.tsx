@@ -7,6 +7,7 @@ import { Button } from "./ui";
 
 const links = [
   { to: "/", key: "nav.board", end: true },
+  { to: "/rooms", key: "nav.layout", end: false },
   { to: "/invoices", key: "nav.invoices", end: false },
   { to: "/products", key: "nav.products", end: false },
   { to: "/settings", key: "nav.settings", end: false },
