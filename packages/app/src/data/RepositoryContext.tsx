@@ -2,14 +2,17 @@ import { createContext, useContext, useEffect, useMemo, type ReactNode } from "r
 import { useQueryClient } from "@tanstack/react-query";
 import { loadLocalConfig } from "../lib/config";
 import { HttpRepository } from "./http/HttpRepository";
+import { SqliteRepository } from "./local/SqliteRepository";
 import type { SnackRepository } from "./repository";
 
 const RepositoryCtx = createContext<SnackRepository | null>(null);
 
 export function RepositoryProvider({ children }: { children: ReactNode }): JSX.Element {
   const cfg = loadLocalConfig();
-  // Phase 5 swaps in SqliteRepository when cfg.mode === "autonomous".
-  const repo = useMemo<SnackRepository>(() => new HttpRepository(cfg.apiUrl), [cfg.apiUrl]);
+  const repo = useMemo<SnackRepository>(
+    () => (cfg.mode === "autonomous" ? new SqliteRepository() : new HttpRepository(cfg.apiUrl)),
+    [cfg.apiUrl, cfg.mode],
+  );
   const qc = useQueryClient();
 
   useEffect(() => {

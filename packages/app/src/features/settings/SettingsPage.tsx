@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TimeRounding, UserRole } from "@snackmanager/shared";
 import { Badge, Button, Card, Field, Input, Select, Spinner } from "../../components/ui";
@@ -6,6 +6,7 @@ import { loadLocalConfig, saveLocalConfig, type DeployMode } from "../../lib/con
 import { setLocale, storedLocale } from "../../i18n";
 import { useAuth } from "../../auth/AuthContext";
 import { useCreateUser, useSaveSettings, useSettings, useUsers } from "../../data/queries";
+import { getLocalDb, importLocalDb, resetLocalDb } from "../../data/local/db";
 
 export function SettingsPage(): JSX.Element {
   const { t } = useTranslation();
@@ -63,11 +64,12 @@ export function SettingsPage(): JSX.Element {
           </Select>
         </Field>
         {local.mode === "autonomous" ? (
-          <p className="text-xs text-amber-600">{t("settings.autonomousSoon")}</p>
-        ) : null}
-        <Field label={t("settings.apiUrl")}>
-          <Input value={local.apiUrl} onChange={(e) => applyLocal({ apiUrl: e.target.value })} />
-        </Field>
+          <p className="text-xs text-slate-500">{t("settings.autonomousHint")}</p>
+        ) : (
+          <Field label={t("settings.apiUrl")}>
+            <Input value={local.apiUrl} onChange={(e) => applyLocal({ apiUrl: e.target.value })} />
+          </Field>
+        )}
         <Field label={t("settings.locale")}>
           <Select
             defaultValue={storedLocale()}
@@ -77,10 +79,10 @@ export function SettingsPage(): JSX.Element {
             <option value="en">English</option>
           </Select>
         </Field>
-        <p className="text-xs text-slate-400">
-          {t("settings.apiUrl")} / {t("settings.deployment")} → reload to apply.
-        </p>
+        <p className="text-xs text-slate-400">{t("settings.reloadHint")}</p>
       </Card>
+
+      {local.mode === "autonomous" ? <LocalDataCard /> : null}
 
       <Card className="space-y-4 p-4">
         <h2 className="text-sm font-semibold text-slate-700">{t("settings.billing")}</h2>
@@ -215,6 +217,93 @@ function StaffCard(): JSX.Element {
       {createUser.isError ? (
         <p className="text-sm text-rose-600">{(createUser.error as Error).message}</p>
       ) : null}
+    </Card>
+  );
+}
+
+function LocalDataCard(): JSX.Element {
+  const { t } = useTranslation();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState<"opfs" | "kvvfs" | "memory" | null>(null);
+
+  useEffect(() => {
+    void getLocalDb().then((db) => setKind(db.kind));
+  }, []);
+
+  const exportDb = async (): Promise<void> => {
+    setBusy(true);
+    try {
+      const db = await getLocalDb();
+      const bytes = db.exportBytes();
+      const buffer = bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength,
+      ) as ArrayBuffer;
+      const blob = new Blob([buffer], { type: "application/x-sqlite3" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `snackmanager-${new Date().toISOString().slice(0, 10)}.sqlite3`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const importDb = async (file: File): Promise<void> => {
+    setBusy(true);
+    try {
+      await importLocalDb(new Uint8Array(await file.arrayBuffer()));
+    } catch (err) {
+      setBusy(false);
+      window.alert(String(err));
+    }
+  };
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="text-sm font-semibold text-slate-700">{t("settings.localData")}</h2>
+      {kind === "memory" ? (
+        <p className="text-xs text-amber-600">{t("settings.notPersistent")}</p>
+      ) : kind === "kvvfs" ? (
+        <p className="text-xs text-slate-500">{t("settings.kvvfsNote")}</p>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" disabled={busy} onClick={() => void exportDb()}>
+          {t("settings.exportDb")}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy || kind !== "opfs"}
+          onClick={() => fileRef.current?.click()}
+        >
+          {t("settings.importDb")}
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={busy}
+          onClick={() => {
+            if (window.confirm(t("settings.resetDbConfirm"))) void resetLocalDb();
+          }}
+        >
+          {t("settings.resetDb")}
+        </Button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".sqlite3,.db,application/x-sqlite3"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void importDb(f);
+          }}
+        />
+      </div>
+      <p className="text-xs text-slate-400">{t("settings.localDataHint")}</p>
     </Card>
   );
 }

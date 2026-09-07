@@ -12,14 +12,27 @@ interface AuthContextValue {
 
 const AuthCtx = createContext<AuthContextValue | null>(null);
 
+const LOCAL_ADMIN: SessionUser = {
+  id: "local",
+  username: "local",
+  role: "ADMIN",
+  displayName: "Local",
+};
+
 export function AuthProvider({ children }: { children: ReactNode }): JSX.Element {
-  const { apiUrl } = loadLocalConfig();
+  const { apiUrl, mode } = loadLocalConfig();
   const [user, setUser] = useState<SessionUser | null>(authStore.get().user);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => authStore.subscribe(() => setUser(authStore.get().user)), []);
 
   useEffect(() => {
+    if (mode === "autonomous") {
+      // No server, no login screen — a single implicit local admin.
+      authStore.setSession(LOCAL_ADMIN, "local");
+      setLoading(false);
+      return;
+    }
     setOnSessionLost(() => authStore.clear());
     let cancelled = false;
     void (async () => {
@@ -49,9 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     return () => {
       cancelled = true;
     };
-  }, [apiUrl]);
+  }, [apiUrl, mode]);
 
   const login = async (username: string, password: string): Promise<void> => {
+    if (mode === "autonomous") {
+      authStore.setSession(LOCAL_ADMIN, "local");
+      return;
+    }
     const res = await fetch(`${apiUrl}/api/auth/login`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -67,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   };
 
   const logout = async (): Promise<void> => {
+    if (mode === "autonomous") return; // nothing to log out of
     const rt = authStore.refreshToken();
     authStore.clear();
     if (rt) {

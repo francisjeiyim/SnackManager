@@ -35,6 +35,9 @@ importers:
       '@snackmanager/shared':
         specifier: workspace:*
         version: link:../shared
+      '@sqlite.org/sqlite-wasm':
+        specifier: ^3.47.2-build1
+        version: 3.47.2-build1
       '@tanstack/react-query':
         specifier: ^5.62.7
         version: 5.102.8(react@18.3.1)
@@ -1787,6 +1790,10 @@ packages:
 
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
+
+  '@sqlite.org/sqlite-wasm@3.47.2-build1':
+    resolution: {integrity: sha512-jDRWfcPYmOsJGN1GplXbw5ZlB+PSzihw1EDElzqkenSI+yK7QYOfwhzYnBR9H8Bv5MHi6EUMb4t3CnLfXCSA8A==}
+    hasBin: true
 
   '@tanstack/query-core@5.102.8':
     resolution: {integrity: sha512-ZNjkJ33CqvPNec/6lZBnHqLc3EVGPZ9ySLhYahU9TcuRFdmwXewuj0c4hwSWcGHqEUwcSrKeZ+oGcvPBqXcQcg==}
@@ -7236,6 +7243,8 @@ snapshots:
       '@sinonjs/commons': 3.0.1
 
   '@socket.io/component-emitter@3.1.2': {}
+
+  '@sqlite.org/sqlite-wasm@3.47.2-build1': {}
 
   '@tanstack/query-core@5.102.8': {}
 

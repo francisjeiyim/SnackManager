@@ -33,6 +33,10 @@ export default defineConfig({
       },
     }),
   ],
+  // sqlite-wasm ships its own .wasm and must not be pre-bundled by esbuild.
+  optimizeDeps: {
+    exclude: ["@sqlite.org/sqlite-wasm"],
+  },
   server: {
     port: 5273,
   },

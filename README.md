@@ -72,8 +72,15 @@ pnpm build
   room settings (name, size, background colour), delete seat / room. Local edits show an
   "unsaved" badge and persist through `PATCH /seats/bulk`; verified in-browser (move → save →
   reload keeps position; add/delete dynamic seat).
-- **Next — Phase 5**: standalone (in-browser SQLite / OPFS) mode — a `SqliteRepository`
-  implementing the same interface with the shared billing engine, plus mode switch and
-  local backup/restore.
+- **Phase 5 — standalone mode** (`packages/app`): done. `SqliteRepository` implements the whole
+  `SnackRepository` in the browser over `@sqlite.org/sqlite-wasm` — OPFS sync-access-handle pool
+  when available, `localStorage` (kvvfs) fallback, in-memory last resort. Every money/time
+  calculation goes through the same `@snackmanager/shared` engine (`planClose` / `planMerge` /
+  `planSplit` / `computeTicketTotals`), so an offline bill matches a server one. `schema.sql`
+  mirrors `schema.prisma`, enforced by a 14-case parity test. Cross-tab updates via
+  `BroadcastChannel`; first-run seed; `.sqlite3` export / import / reset in Settings; no login
+  screen (implicit local admin). Verified in-browser: seat-in → order → close → pay → even split,
+  and data surviving a full reload.
 
-Full plan in `docs/` and the approved plan file.
+Full plan in `docs/` and the approved plan file. Remaining: Phase 6 — receipts, daily Z-report,
+PWA icons + install docs, README polish.
