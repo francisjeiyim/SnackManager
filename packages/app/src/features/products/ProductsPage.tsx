@@ -67,37 +67,39 @@ export function ProductsPage(): JSX.Element {
             ))}
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <tr>
-                <th className="p-3">{t("products.name")}</th>
-                <th className="p-3">{t("products.category")}</th>
-                <th className="p-3 text-right">{t("products.price")}</th>
-                <th className="p-3">{t("products.active")}</th>
-                <th className="p-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {(productsQ.data ?? []).map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 last:border-0">
-                  <td className="p-3">
-                    {p.emoji ? <span className="mr-1">{p.emoji}</span> : null}
-                    {p.name}
-                  </td>
-                  <td className="p-3 text-slate-500">{p.category ?? "—"}</td>
-                  <td className="p-3 text-right tabular-nums">{yen(p.priceYen, locale)}</td>
-                  <td className="p-3">
-                    {p.isActive ? <Badge tone="emerald">✓</Badge> : <Badge tone="slate">—</Badge>}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => edit(p)}>
-                      {t("products.edit")}
-                    </Button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="p-3">{t("products.name")}</th>
+                  <th className="p-3">{t("products.category")}</th>
+                  <th className="p-3 text-right">{t("products.price")}</th>
+                  <th className="p-3">{t("products.active")}</th>
+                  <th className="p-3" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(productsQ.data ?? []).map((p) => (
+                  <tr key={p.id} className="border-b border-slate-100 last:border-0">
+                    <td className="p-3">
+                      {p.emoji ? <span className="mr-1">{p.emoji}</span> : null}
+                      {p.name}
+                    </td>
+                    <td className="p-3 text-slate-500">{p.category ?? "—"}</td>
+                    <td className="p-3 text-right tabular-nums">{yen(p.priceYen, locale)}</td>
+                    <td className="p-3">
+                      {p.isActive ? <Badge tone="emerald">✓</Badge> : <Badge tone="slate">—</Badge>}
+                    </td>
+                    <td className="p-3 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => edit(p)}>
+                        {t("products.edit")}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
 
@@ -126,7 +128,7 @@ export function ProductsPage(): JSX.Element {
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label={t("products.category")}>
               <Input
                 value={draft.category}
@@ -141,7 +143,7 @@ export function ProductsPage(): JSX.Element {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Emoji">
               <Input
                 value={draft.emoji}
@@ -149,7 +151,7 @@ export function ProductsPage(): JSX.Element {
                 onChange={(e) => setDraft({ ...draft, emoji: e.target.value })}
               />
             </Field>
-            <label className="mt-6 flex items-center gap-2 text-sm text-slate-600">
+            <label className="flex items-center gap-2 text-sm text-slate-600 sm:mt-6">
               <input
                 type="checkbox"
                 checked={draft.isActive}

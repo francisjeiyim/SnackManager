@@ -223,13 +223,13 @@ export function TicketPanel({
       {/* action bar */}
       <div className="border-t border-stone-100 p-3">
         {isOpen && perms.canServe ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {perms.canCashier ? (
               <>
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="flex-1"
+                  className="min-w-[88px] flex-1"
                   onClick={() => setModal("merge")}
                 >
                   {t("ticket.merge")}
@@ -237,7 +237,7 @@ export function TicketPanel({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="flex-1"
+                  className="min-w-[88px] flex-1"
                   onClick={() => setModal("split")}
                 >
                   {t("ticket.split")}
@@ -245,7 +245,7 @@ export function TicketPanel({
                 <Button
                   variant="success"
                   size="sm"
-                  className="flex-1"
+                  className="min-w-[88px] flex-1"
                   loading={closeTicket.isPending}
                   onClick={() =>
                     closeTicket.mutate(
@@ -258,14 +258,14 @@ export function TicketPanel({
                 </Button>
               </>
             ) : (
-              <Button className="flex-1" onClick={() => setModal("pos")}>
+              <Button className="min-w-[88px] flex-1" onClick={() => setModal("pos")}>
                 ＋ {t("ticket.addProduct")}
               </Button>
             )}
           </div>
         ) : null}
         {ticket.status === "CLOSED" ? (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="ghost" size="sm" onClick={() => printReceipt(ticket, locale)}>
               {t("ticket.print")}
             </Button>
@@ -274,12 +274,12 @@ export function TicketPanel({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="flex-1"
+                  className="min-w-[88px] flex-1"
                   onClick={() => setModal("split")}
                 >
                   {t("ticket.split")}
                 </Button>
-                <Button size="sm" className="flex-1" onClick={() => setModal("pay")}>
+                <Button size="sm" className="min-w-[88px] flex-1" onClick={() => setModal("pay")}>
                   {t("ticket.pay")}
                 </Button>
               </>

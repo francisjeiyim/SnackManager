@@ -11,6 +11,8 @@ const OVERTIME_MIN = 120;
 interface Props {
   room: RoomWithSeats;
   guestsBySeat: Map<string, Guest[]>;
+  /** Available width for the plan; the canvas scales to fit it. */
+  containerWidth: number;
   /** Alert interval in minutes (0 = off). */
   alertIntervalMinutes: number;
   /** Blink lead time before each interval boundary (0 = off). */
@@ -21,13 +23,16 @@ interface Props {
 export function RoomCanvas({
   room,
   guestsBySeat,
+  containerWidth,
   alertIntervalMinutes,
   alertLeadMinutes,
   onSeatClick,
 }: Props): JSX.Element {
   const { t } = useTranslation();
   const now = useNow(1000);
-  const scale = Math.min(1, 880 / room.width);
+  const scale = containerWidth
+    ? Math.max(0.2, Math.min(1.4, containerWidth / room.width))
+    : Math.min(1, 880 / room.width);
 
   return (
     <div

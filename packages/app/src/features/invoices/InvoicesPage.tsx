@@ -43,36 +43,38 @@ export function InvoicesPage(): JSX.Element {
         ) : (historyQ.data ?? []).length === 0 ? (
           <EmptyState icon="▤" title={t("invoices.empty")} />
         ) : (
-          <table className="w-full text-sm">
-            <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
-              <tr>
-                <th className="p-3">{t("invoices.number")}</th>
-                <th className="p-3">{t("invoices.opened")}</th>
-                <th className="p-3">{t("invoices.closed")}</th>
-                <th className="p-3 text-right">{t("invoices.total")}</th>
-                <th className="p-3">{t("invoices.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(historyQ.data ?? []).map((tk) => (
-                <tr
-                  key={tk.id}
-                  onClick={() => setDetail(tk)}
-                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="p-3 font-medium">#{tk.number}</td>
-                  <td className="p-3 text-slate-500">{dateTime(tk.openedAt, locale)}</td>
-                  <td className="p-3 text-slate-500">
-                    {tk.closedAt ? dateTime(tk.closedAt, locale) : "—"}
-                  </td>
-                  <td className="p-3 text-right tabular-nums">{yen(tk.totalYen, locale)}</td>
-                  <td className="p-3">
-                    <Badge tone={tone[tk.status]}>{t(`ticket.status.${tk.status}`)}</Badge>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[520px] text-sm">
+              <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+                <tr>
+                  <th className="p-3">{t("invoices.number")}</th>
+                  <th className="p-3">{t("invoices.opened")}</th>
+                  <th className="p-3">{t("invoices.closed")}</th>
+                  <th className="p-3 text-right">{t("invoices.total")}</th>
+                  <th className="p-3">{t("invoices.status")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(historyQ.data ?? []).map((tk) => (
+                  <tr
+                    key={tk.id}
+                    onClick={() => setDetail(tk)}
+                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                  >
+                    <td className="p-3 font-medium">#{tk.number}</td>
+                    <td className="p-3 text-slate-500">{dateTime(tk.openedAt, locale)}</td>
+                    <td className="p-3 text-slate-500">
+                      {tk.closedAt ? dateTime(tk.closedAt, locale) : "—"}
+                    </td>
+                    <td className="p-3 text-right tabular-nums">{yen(tk.totalYen, locale)}</td>
+                    <td className="p-3">
+                      <Badge tone={tone[tk.status]}>{t(`ticket.status.${tk.status}`)}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
 

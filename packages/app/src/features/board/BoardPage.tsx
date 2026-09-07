@@ -7,6 +7,7 @@ import { cn } from "../../lib/cn";
 import { duration, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { useNow } from "../../lib/useNow";
+import { useElementWidth } from "../../lib/useElementWidth";
 import { usePermissions } from "../../lib/permissions";
 import { useRepository } from "../../data/RepositoryContext";
 import { useActiveGuests, useLiveTickets, useRooms, useSettings } from "../../data/queries";
@@ -28,6 +29,7 @@ export function BoardPage(): JSX.Element {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [seatInSeatId, setSeatInSeatId] = useState<string | null | undefined>(undefined);
   const [ticketId, setTicketId] = useState<string | null>(null);
+  const [canvasRef, canvasWidth] = useElementWidth<HTMLDivElement>();
 
   const rooms = useMemo(() => roomsQ.data ?? [], [roomsQ.data]);
 
@@ -97,11 +99,13 @@ export function BoardPage(): JSX.Element {
 
         <div className="flex flex-wrap items-center gap-2">
           {rooms.length > 1 ? (
-            <SegmentedControl
-              value={room?.id ?? ""}
-              onChange={setActiveRoomId}
-              options={rooms.map((r) => ({ value: r.id, label: r.name }))}
-            />
+            <div className="max-w-full overflow-x-auto">
+              <SegmentedControl
+                value={room?.id ?? ""}
+                onChange={setActiveRoomId}
+                options={rooms.map((r) => ({ value: r.id, label: r.name }))}
+              />
+            </div>
           ) : (
             <span className="text-sm font-semibold text-stone-700">{room?.name}</span>
           )}
@@ -121,10 +125,11 @@ export function BoardPage(): JSX.Element {
         </div>
 
         {room ? (
-          <div className="overflow-auto pb-2">
+          <div ref={canvasRef} className="overflow-x-auto pb-2">
             <RoomCanvas
               room={room}
               guestsBySeat={guestsBySeat}
+              containerWidth={canvasWidth}
               alertIntervalMinutes={settingsQ.data?.hourWarningIntervalMinutes ?? 0}
               alertLeadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
               onSeatClick={(seatId, tId) => {

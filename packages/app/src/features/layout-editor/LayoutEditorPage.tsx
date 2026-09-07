@@ -1,8 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SeatKind } from "@snackmanager/shared";
-import { Badge, Button, Card, Spinner } from "../../components/ui";
-import { cn } from "../../lib/cn";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Modal,
+  SectionTitle,
+  SegmentedControl,
+  Skeleton,
+} from "../../components/ui";
+import { useElementWidth } from "../../lib/useElementWidth";
 import { useRooms, useLayoutMutations } from "../../data/queries";
 import { EditableCanvas } from "./EditableCanvas";
 import { SeatProperties } from "./SeatProperties";
@@ -13,6 +22,7 @@ export function LayoutEditorPage(): JSX.Element {
   const { t } = useTranslation();
   const roomsQ = useRooms();
   const m = useLayoutMutations();
+  const [canvasRef, canvasWidth] = useElementWidth<HTMLDivElement>();
 
   const rooms = useMemo(() => roomsQ.data ?? [], [roomsQ.data]);
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
@@ -27,20 +37,20 @@ export function LayoutEditorPage(): JSX.Element {
     if (!activeRoomId && rooms[0]) setActiveRoomId(rooms[0].id);
   }, [rooms, activeRoomId]);
 
-  // Sync drafts from the server unless there are unsaved edits.
   useEffect(() => {
     if (room && !dirty) setDrafts(room.seats.map((s) => ({ ...s })));
   }, [room, dirty]);
 
   if (roomsQ.isLoading) {
     return (
-      <div className="flex justify-center p-10">
-        <Spinner className="h-7 w-7" />
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-[420px] w-full" />
       </div>
     );
   }
 
-  const scale = room ? Math.min(1, 900 / room.width) : 1;
+  const scale = room && canvasWidth ? Math.min(1, canvasWidth / room.width) : 1;
   const selected = drafts.find((s) => s.id === selectedId) ?? null;
 
   const patchSeat = (id: string, patch: Partial<SeatDraft>): void => {
@@ -103,34 +113,38 @@ export function LayoutEditorPage(): JSX.Element {
     setDirty(false);
   };
 
+  const props =
+    selected != null ? (
+      <SeatProperties
+        seat={selected}
+        onChange={(patch) => patchSeat(selected.id, patch)}
+        onDelete={() => void deleteSeat(selected.id)}
+      />
+    ) : (
+      <p className="text-sm text-stone-400">{t("layout.selectSeat")}</p>
+    );
+
   return (
-    <div className="flex gap-4">
+    <div className="flex flex-col gap-4 lg:flex-row">
       <div className="min-w-0 flex-1 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1">
-            {rooms.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => {
-                  setActiveRoomId(r.id);
+        <div className="flex flex-wrap items-center gap-1.5">
+          {rooms.length > 0 ? (
+            <div className="max-w-full overflow-x-auto">
+              <SegmentedControl
+                value={room?.id ?? ""}
+                onChange={(id) => {
+                  setActiveRoomId(id);
                   setDirty(false);
                   setSelectedId(null);
                 }}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium",
-                  r.id === room?.id
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-600 hover:bg-slate-100",
-                )}
-              >
-                {r.name}
-              </button>
-            ))}
-          </div>
+                options={rooms.map((r) => ({ value: r.id, label: r.name }))}
+              />
+            </div>
+          ) : null}
           <Button size="sm" variant="ghost" onClick={() => void addRoom()}>
             + {t("layout.addRoom")}
           </Button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-1.5">
             {dirty ? <Badge tone="amber">{t("layout.unsaved")}</Badge> : null}
             <Button size="sm" variant="secondary" onClick={() => setShowRoomSettings(true)}>
               {t("layout.roomSettings")}
@@ -153,7 +167,7 @@ export function LayoutEditorPage(): JSX.Element {
         </div>
 
         {room ? (
-          <div className="overflow-auto">
+          <div ref={canvasRef} className="overflow-x-auto">
             <EditableCanvas
               width={room.width}
               height={room.height}
@@ -166,26 +180,26 @@ export function LayoutEditorPage(): JSX.Element {
             />
           </div>
         ) : (
-          <Card className="p-6 text-sm text-slate-500">{t("board.noRooms")}</Card>
+          <Card>
+            <EmptyState icon="▢" title={t("board.noRooms")} hint={t("board.noRoomsHint")} />
+          </Card>
         )}
       </div>
 
-      <div className="w-64 shrink-0">
+      {/* properties: side column on lg+, bottom sheet on smaller screens */}
+      <div className="hidden w-64 shrink-0 lg:block">
         <Card className="p-3">
-          <div className="mb-2 text-xs font-medium uppercase text-slate-400">
-            {t("layout.properties")}
-          </div>
-          {selected ? (
-            <SeatProperties
-              seat={selected}
-              onChange={(patch) => patchSeat(selected.id, patch)}
-              onDelete={() => void deleteSeat(selected.id)}
-            />
-          ) : (
-            <p className="text-sm text-slate-400">{t("layout.selectSeat")}</p>
-          )}
+          <SectionTitle>{t("layout.properties")}</SectionTitle>
+          <div className="mt-2">{props}</div>
         </Card>
       </div>
+      {selected != null ? (
+        <div className="lg:hidden">
+          <Modal open title={t("layout.properties")} onClose={() => setSelectedId(null)}>
+            {props}
+          </Modal>
+        </div>
+      ) : null}
 
       {showRoomSettings && room ? (
         <RoomSettingsModal

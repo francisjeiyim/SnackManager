@@ -94,7 +94,7 @@ export function SettingsPage(): JSX.Element {
           <Spinner />
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t("settings.ratePerMinute")}>
                 <Input
                   type="number"
@@ -219,7 +219,7 @@ function StaffCard(): JSX.Element {
           ))}
         </ul>
       )}
-      <div className="grid grid-cols-[1fr_1fr_120px_auto] items-end gap-2">
+      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_1fr_140px_auto] sm:items-end">
         <Field label={t("login.username")}>
           <Input
             value={draft.username}

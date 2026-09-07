@@ -249,38 +249,40 @@ export function ReportsPage(): JSX.Element {
             <div className="border-b border-stone-100 px-4 py-3">
               <SectionTitle>{t("reports.byDay")}</SectionTitle>
             </div>
-            <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase text-stone-400">
-                <tr>
-                  <th className="px-4 py-2">{t("reports.date")}</th>
-                  <th className="px-4 py-2 text-right">{t("reports.tickets")}</th>
-                  <th className="px-4 py-2 text-right">{t("reports.guests")}</th>
-                  <th className="px-4 py-2 text-right">{t("reports.revenue")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.byDay.map(([d, r]) => (
-                  <tr key={d} className="border-t border-stone-50">
-                    <td className="px-4 py-2 tabular-nums text-stone-600">{d}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.tickets}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.guests}</td>
-                    <td className="px-4 py-2">
-                      <div className="flex items-center justify-end gap-2">
-                        <div className="hidden h-1.5 w-24 rounded-full bg-stone-100 sm:block">
-                          <div
-                            className="h-full rounded-full bg-accent/70"
-                            style={{ width: `${(r.revenueYen / data.maxDayRev) * 100}%` }}
-                          />
-                        </div>
-                        <span className="tabular-nums font-medium">
-                          {yen(r.revenueYen, locale)}
-                        </span>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[440px] text-sm">
+                <thead className="text-left text-xs uppercase text-stone-400">
+                  <tr>
+                    <th className="px-4 py-2">{t("reports.date")}</th>
+                    <th className="px-4 py-2 text-right">{t("reports.tickets")}</th>
+                    <th className="px-4 py-2 text-right">{t("reports.guests")}</th>
+                    <th className="px-4 py-2 text-right">{t("reports.revenue")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.byDay.map(([d, r]) => (
+                    <tr key={d} className="border-t border-stone-50">
+                      <td className="px-4 py-2 tabular-nums text-stone-600">{d}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{r.tickets}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{r.guests}</td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="hidden h-1.5 w-24 rounded-full bg-stone-100 sm:block">
+                            <div
+                              className="h-full rounded-full bg-accent/70"
+                              style={{ width: `${(r.revenueYen / data.maxDayRev) * 100}%` }}
+                            />
+                          </div>
+                          <span className="tabular-nums font-medium">
+                            {yen(r.revenueYen, locale)}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card>
         </>
       )}
