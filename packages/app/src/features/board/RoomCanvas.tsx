@@ -95,26 +95,42 @@ export function RoomCanvas({
               : `${names[0]} +${guests.length - 1}`;
         const left = seat.x * scale;
         const width = seat.w * scale;
+        const chipW = Math.max(width, 120);
+        // stacked chips sit just above the seat: staff band (top), guest name (below)
+        const chipCount = (assignment ? 1 : 0) + (guestLabel ? 1 : 0);
+        const chipsTop = Math.max(0, seat.y * scale - chipCount * 17 - 2);
 
         return (
           <div key={seat.id}>
-            {assignment ? (
+            {chipCount > 0 ? (
               <div
-                className="pointer-events-none absolute z-10 flex items-center gap-1 truncate rounded-md bg-stone-800/90 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-white shadow-sm"
-                style={{
-                  left,
-                  top: Math.max(0, seat.y * scale - 18),
-                  maxWidth: Math.max(width, 110),
-                }}
-                title={`${assignment.staffName} · ${duration(
-                  elapsedMs(new Date(assignment.assignedAt), now),
-                )}`}
+                className="pointer-events-none absolute z-10 flex flex-col gap-0.5"
+                style={{ left, top: chipsTop, width: chipW }}
               >
-                <span aria-hidden>👤</span>
-                <span className="truncate">{assignment.staffName}</span>
-                <span className="tabular-nums opacity-80">
-                  {duration(elapsedMs(new Date(assignment.assignedAt), now))}
-                </span>
+                {assignment ? (
+                  <span
+                    className="flex items-center gap-1 self-start truncate rounded-md bg-stone-800/90 px-1.5 py-0.5 text-[10px] font-semibold leading-tight text-white shadow-sm"
+                    style={{ maxWidth: chipW }}
+                    title={`${assignment.staffName} · ${duration(
+                      elapsedMs(new Date(assignment.assignedAt), now),
+                    )}`}
+                  >
+                    <span aria-hidden>👤</span>
+                    <span className="truncate">{assignment.staffName}</span>
+                    <span className="tabular-nums opacity-80">
+                      {duration(elapsedMs(new Date(assignment.assignedAt), now))}
+                    </span>
+                  </span>
+                ) : null}
+                {guestLabel ? (
+                  <span
+                    className="self-start max-w-full truncate rounded-md bg-white px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-stone-700 shadow-sm ring-1 ring-stone-300"
+                    style={{ maxWidth: chipW }}
+                    title={guestLabel}
+                  >
+                    {guestLabel}
+                  </span>
+                ) : null}
               </div>
             ) : null}
 
@@ -145,11 +161,7 @@ export function RoomCanvas({
               <span className="px-1 leading-tight">{seat.label}</span>
               {occupied ? (
                 <>
-                  {guestLabel ? (
-                    <span className="max-w-full truncate px-1 text-[11px] font-semibold leading-tight">
-                      {guestLabel}
-                    </span>
-                  ) : guests.length > 1 ? (
+                  {guests.length > 1 ? (
                     <span className="rounded-full bg-white/80 px-1 text-[10px] font-semibold">
                       ×{guests.length}
                     </span>
