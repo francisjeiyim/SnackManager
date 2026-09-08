@@ -64,7 +64,7 @@ export function BoardPage(): JSX.Element {
     const runningYen = (liveQ.data ?? [])
       .filter((tk) => tk.status === "OPEN")
       .reduce((a, tk) => a + tk.live.totalYen, 0);
-    return { tables: guestsBySeat.size, guests: guests.length, longestMs, runningYen };
+    return { seatsInUse: guestsBySeat.size, guests: guests.length, longestMs, runningYen };
   }, [guests, guestsBySeat, liveQ.data, now]);
 
   if (roomsQ.isLoading) {
@@ -88,7 +88,7 @@ export function BoardPage(): JSX.Element {
       <div className="min-w-0 flex-1 space-y-3">
         {/* summary bar */}
         <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 text-sm">
-          <Stat label={t("board.tables")} value={String(summary.tables)} />
+          <Stat label={t("board.seatsInUse")} value={String(summary.seatsInUse)} />
           <Stat label={t("board.guestsCount")} value={String(summary.guests)} />
           <Stat label={t("board.running")} value={yen(summary.runningYen, locale)} />
           <Stat
@@ -118,10 +118,20 @@ export function BoardPage(): JSX.Element {
 
         {/* legend */}
         <div className="flex flex-wrap gap-3 text-xs text-stone-500">
-          <LegendDot className="border-stone-300 bg-stone-50" label={t("board.free")} />
+          <LegendDot className="border-dashed border-stone-300 bg-stone-50" label={t("board.free")} />
           <LegendDot className="border-emerald-500 bg-emerald-50" label={t("board.occupied")} />
-          <LegendDot className="border-amber-500 bg-amber-50" label={t("board.overtime")} />
-          <LegendDot className="border-rose-400 bg-rose-50" label={t("board.alert")} />
+          <LegendDot className="border-amber-500 bg-amber-100" label={t("board.overtime")} />
+          <LegendDot className="border-rose-500 bg-rose-100" label={t("board.alert")} />
+          <span className="inline-flex items-center gap-1.5">
+            <span className="rounded-full bg-white px-1 text-[10px] font-semibold ring-1 ring-stone-300">
+              ×N
+            </span>
+            {t("board.multi")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span aria-hidden>👤</span>
+            {t("staff.title")}
+          </span>
         </div>
 
         {room ? (
@@ -182,7 +192,7 @@ function Stat({ label, value }: { label: string; value: string }): JSX.Element {
 function LegendDot({ className, label }: { className: string; label: string }): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={cn("h-3 w-3 rounded border-2", className)} />
+      <span className={cn("h-3 w-3 rounded border-[3px]", className)} />
       {label}
     </span>
   );

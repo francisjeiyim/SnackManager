@@ -6,6 +6,7 @@
     "invoices": "Invoices",
     "reports": "Report",
     "products": "Products",
+    "staff": "Staff",
     "settings": "Settings",
     "logout": "Log out"
   },
@@ -74,10 +75,12 @@
     "noRoomsHint": "Create rooms and seats in the Layout screen.",
     "seatIn": "Seat guests",
     "openTicket": "Open ticket",
-    "tables": "Tables",
+    "seatsInUse": "Seats in use",
     "guestsCount": "Guests",
     "running": "Running total",
-    "longest": "Longest stay"
+    "longest": "Longest stay",
+    "multi": "Shared seat",
+    "noPresentStaff": "No staff on the floor — mark someone present first"
   },
   "seatIn": {
     "title": "Seat guests",
@@ -111,6 +114,9 @@
     "leave": "Leave",
     "move": "Move",
     "closed": "Ticket closed",
+    "assignStaff": "Assign staff",
+    "assignedTo": "In charge: {{name}}",
+    "unassign": "Remove staff",
     "status": { "OPEN": "Open", "CLOSED": "Closed", "PAID": "Paid", "VOID": "Void" },
     "empty": "Select a ticket"
   },
@@ -210,8 +216,35 @@
     "save": "Save",
     "saved": "Saved",
     "staff": "Staff",
+    "manageStaff": "Manage staff",
     "addStaff": "Add staff",
     "role": "Role",
+    "roles": { "ADMIN": "Admin", "CASHIER": "Cashier", "SERVER": "Server" }
+  },
+  "staff": {
+    "title": "Staff",
+    "add": "Add staff",
+    "edit": "Edit",
+    "name": "Name",
+    "username": "Username",
+    "password": "Password",
+    "job": "Job",
+    "jobPlaceholder": "e.g. Server, Kitchen, Manager",
+    "role": "Role",
+    "active": "Active",
+    "presence": "Presence",
+    "present": "Present",
+    "absent": "Absent",
+    "break": "On break",
+    "since": "since {{time}}",
+    "resetPassword": "Reset password",
+    "newPassword": "New password",
+    "delete": "Delete",
+    "deleteConfirm": "Delete {{name}}? This cannot be undone.",
+    "deleteBlocked": "This account has recorded activity — it was deactivated instead of deleted.",
+    "lastAdmin": "At least one active admin is required.",
+    "selfForbidden": "You cannot deactivate or delete your own account.",
+    "empty": "No staff yet",
     "roles": { "ADMIN": "Admin", "CASHIER": "Cashier", "SERVER": "Server" }
   },
   "common": {

@@ -15,8 +15,10 @@ import type {
   SeatInput,
   SeatPatch,
   SettingsUpdateInput,
+  StaffPresence,
   TicketPatchInput,
   UserCreateInput,
+  UserUpdateInput,
 } from "@snackmanager/shared";
 import { createApiClient, type ApiClient } from "./client";
 import { ServiceSocket } from "./socket";
@@ -95,6 +97,9 @@ export class HttpRepository implements SnackRepository {
   activeGuests(): Promise<Guest[]> {
     return this.api.request("GET", "/guests/active");
   }
+  assignableStaff(): Promise<PublicUser[]> {
+    return this.api.request("GET", "/guests/assignable-staff");
+  }
   seatIn(input: SeatInInput): Promise<SeatInResult> {
     return this.api.request("POST", "/guests/seat-in", input);
   }
@@ -106,6 +111,12 @@ export class HttpRepository implements SnackRepository {
   }
   renameGuest(guestId: string, displayName: string | null): Promise<Guest> {
     return this.api.request("PATCH", `/guests/${guestId}`, { displayName });
+  }
+  assignGuest(guestId: string, userId: string): Promise<Guest> {
+    return this.api.request("PUT", `/guests/${guestId}/assignment`, { userId });
+  }
+  unassignGuest(guestId: string): Promise<Guest> {
+    return this.api.request("DELETE", `/guests/${guestId}/assignment`);
   }
 
   liveTickets(): Promise<TicketView[]> {
@@ -150,8 +161,20 @@ export class HttpRepository implements SnackRepository {
   createUser(input: UserCreateInput): Promise<PublicUser> {
     return this.api.request("POST", "/users", input);
   }
+  updateUser(id: string, patch: UserUpdateInput): Promise<PublicUser> {
+    return this.api.request("PATCH", `/users/${id}`, patch);
+  }
   setUserActive(id: string, isActive: boolean): Promise<PublicUser> {
     return this.api.request("PATCH", `/users/${id}/active`, { isActive });
+  }
+  setUserPresence(id: string, presence: StaffPresence): Promise<PublicUser> {
+    return this.api.request("PATCH", `/users/${id}/presence`, { presence });
+  }
+  async resetUserPassword(id: string, password: string): Promise<void> {
+    await this.api.request("POST", `/users/${id}/password`, { password });
+  }
+  async deleteUser(id: string): Promise<void> {
+    await this.api.request("DELETE", `/users/${id}`);
   }
 
   subscribe(listener: ServiceListener): () => void {

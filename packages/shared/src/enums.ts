@@ -77,6 +77,26 @@ export const UserRole = {
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
+/** Whether a staff member is currently on the floor. Set by an admin. */
+export const StaffPresence = {
+  PRESENT: "PRESENT",
+  ABSENT: "ABSENT",
+  BREAK: "BREAK",
+} as const;
+export type StaffPresence = (typeof StaffPresence)[keyof typeof StaffPresence];
+
+/** Why a staff↔guest assignment ended (history is kept). */
+export const AssignmentEndReason = {
+  /** The guest left / their ticket was closed. */
+  GUEST_LEFT: "GUEST_LEFT",
+  /** The staff was moved to another guest. */
+  REASSIGNED: "REASSIGNED",
+  /** An operator cleared it by hand. */
+  MANUAL: "MANUAL",
+} as const;
+export type AssignmentEndReason =
+  (typeof AssignmentEndReason)[keyof typeof AssignmentEndReason];
+
 export const SplitMode = {
   /** Move chosen guests/items onto a new ticket. */
   ITEMIZED: "ITEMIZED",
@@ -101,6 +121,10 @@ export const AuditAction = {
   LAYOUT_EDIT: "LAYOUT_EDIT",
   PRODUCT_EDIT: "PRODUCT_EDIT",
   SETTINGS_EDIT: "SETTINGS_EDIT",
+  STAFF_EDIT: "STAFF_EDIT",
+  STAFF_PRESENCE: "STAFF_PRESENCE",
+  STAFF_ASSIGN: "STAFF_ASSIGN",
+  STAFF_UNASSIGN: "STAFF_UNASSIGN",
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 
@@ -119,5 +143,6 @@ export const ServiceEvent = {
   LAYOUT_UPDATED: "layout.updated",
   SETTINGS_UPDATED: "settings.updated",
   USER_UPDATED: "user.updated",
+  ASSIGNMENT_UPDATED: "assignment.updated",
 } as const;
 export type ServiceEvent = (typeof ServiceEvent)[keyof typeof ServiceEvent];

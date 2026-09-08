@@ -14,9 +14,9 @@ export function seedLocalDb(db: LocalDb): void {
   );
 
   db.run(
-    `INSERT INTO "User" ("id","username","passwordHash","displayName","role","isActive","createdAt","updatedAt")
-     VALUES (?,?,?,?,'ADMIN',1,?,?)`,
-    [uuid(), "local", "-", "ローカル Admin", ts, ts],
+    `INSERT INTO "User" ("id","username","passwordHash","displayName","role","isActive","presence","presenceChangedAt","createdAt","updatedAt")
+     VALUES (?,?,?,?,'ADMIN',1,'PRESENT',?,?,?)`,
+    [uuid(), "local", "-", "ローカル Admin", ts, ts, ts],
   );
 
   const rooms = [

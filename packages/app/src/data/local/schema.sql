@@ -26,8 +26,12 @@ CREATE TABLE IF NOT EXISTS "User" (
   "username" TEXT NOT NULL UNIQUE,
   "passwordHash" TEXT NOT NULL,
   "displayName" TEXT,
+  "jobTitle" TEXT,
   "role" TEXT NOT NULL DEFAULT 'SERVER',
   "isActive" INTEGER NOT NULL DEFAULT 1,
+  "presence" TEXT NOT NULL DEFAULT 'ABSENT',
+  "presenceChangedAt" TEXT,
+  "deletedAt" TEXT,
   "createdAt" TEXT NOT NULL,
   "updatedAt" TEXT NOT NULL
 );
@@ -88,6 +92,16 @@ CREATE TABLE IF NOT EXISTS "Guest" (
   "status" TEXT NOT NULL DEFAULT 'SEATED',
   "createdAt" TEXT NOT NULL,
   "updatedAt" TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "GuestAssignment" (
+  "id" TEXT PRIMARY KEY,
+  "guestId" TEXT NOT NULL REFERENCES "Guest"("id") ON DELETE CASCADE,
+  "userId" TEXT NOT NULL REFERENCES "User"("id"),
+  "assignedByUserId" TEXT REFERENCES "User"("id"),
+  "assignedAt" TEXT NOT NULL,
+  "endedAt" TEXT,
+  "endedReason" TEXT
 );
 
 CREATE TABLE IF NOT EXISTS "Product" (
@@ -163,6 +177,9 @@ CREATE TABLE IF NOT EXISTS "TicketCounter" (
 CREATE INDEX IF NOT EXISTS "Seat_roomId_idx" ON "Seat" ("roomId");
 CREATE INDEX IF NOT EXISTS "Guest_ticketId_idx" ON "Guest" ("ticketId");
 CREATE INDEX IF NOT EXISTS "Guest_status_idx" ON "Guest" ("status");
+CREATE INDEX IF NOT EXISTS "GuestAssignment_guestId_idx" ON "GuestAssignment" ("guestId");
+CREATE INDEX IF NOT EXISTS "GuestAssignment_userId_idx" ON "GuestAssignment" ("userId");
+CREATE INDEX IF NOT EXISTS "GuestAssignment_endedAt_idx" ON "GuestAssignment" ("endedAt");
 CREATE INDEX IF NOT EXISTS "TicketItem_ticketId_idx" ON "TicketItem" ("ticketId");
 CREATE INDEX IF NOT EXISTS "Payment_ticketId_idx" ON "Payment" ("ticketId");
 CREATE INDEX IF NOT EXISTS "Ticket_status_idx" ON "Ticket" ("status");

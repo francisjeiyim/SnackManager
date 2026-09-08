@@ -5,7 +5,14 @@ import { useRepository } from "../data/RepositoryContext";
 import { usePermissions } from "../lib/permissions";
 import { cn } from "../lib/cn";
 
-type IconName = "board" | "layout" | "invoices" | "reports" | "products" | "settings";
+type IconName =
+  | "board"
+  | "layout"
+  | "invoices"
+  | "reports"
+  | "products"
+  | "staff"
+  | "settings";
 
 const Icon = ({ name }: { name: IconName }): JSX.Element => {
   const p: Record<IconName, string> = {
@@ -14,6 +21,7 @@ const Icon = ({ name }: { name: IconName }): JSX.Element => {
     invoices: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7",
     reports: "M4 20V10M10 20V4M16 20v-7M22 20H2",
     products: "M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10",
+    staff: "M16 20v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M9.5 10a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM20 20v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8",
     settings:
       "M12 15a3 3 0 100-6 3 3 0 000 6zM19 12a7 7 0 00-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 00-1.7-1L14.5 3h-4l-.3 2.5a7 7 0 00-1.7 1l-2.4-1-2 3.5L5 10a7 7 0 000 4l-2 1.5 2 3.5 2.4-1a7 7 0 001.7 1l.3 2.5h4l.3-2.5a7 7 0 001.7-1l2.4 1 2-3.5-2-1.5c.1-.3.1-.7.1-1z",
   };
@@ -31,6 +39,7 @@ const links: Array<{ to: string; key: string; icon: IconName; end: boolean; admi
     { to: "/invoices", key: "nav.invoices", icon: "invoices", end: false, adminOnly: false },
     { to: "/reports", key: "nav.reports", icon: "reports", end: false, adminOnly: false },
     { to: "/products", key: "nav.products", icon: "products", end: false, adminOnly: false },
+    { to: "/staff", key: "nav.staff", icon: "staff", end: false, adminOnly: true },
     { to: "/settings", key: "nav.settings", icon: "settings", end: false, adminOnly: false },
   ];
 

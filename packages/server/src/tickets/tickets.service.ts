@@ -39,7 +39,16 @@ import {
 type Tx = Prisma.TransactionClient;
 
 const withGraph = {
-  guests: { orderBy: { arrivalAt: "asc" }, include: { seat: { select: { label: true } } } },
+  guests: {
+    orderBy: { arrivalAt: "asc" },
+    include: {
+      seat: { select: { label: true } },
+      assignments: {
+        where: { endedAt: null },
+        include: { user: { select: { id: true, displayName: true, username: true } } },
+      },
+    },
+  },
   items: { orderBy: { addedAt: "asc" } },
   payments: { orderBy: { paidAt: "asc" } },
 } satisfies Prisma.TicketInclude;
@@ -325,6 +334,11 @@ export class TicketsService {
           },
         });
       }
+      // Release any staff still assigned to these guests (kept as history).
+      await tx.guestAssignment.updateMany({
+        where: { guestId: { in: plan.guests.map((g) => g.guestId) }, endedAt: null },
+        data: { endedAt: now, endedReason: "GUEST_LEFT" },
+      });
       await tx.ticket.update({
         where: { id },
         data: {

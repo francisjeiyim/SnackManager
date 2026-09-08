@@ -15,11 +15,14 @@ import { usePermissions } from "../../lib/permissions";
 import { printReceipt } from "../../lib/printReceipt";
 import { toastBus } from "../../lib/toastBus";
 import {
+  useAssignableStaff,
+  useAssignGuest,
   useCloseTicket,
   useRenameGuest,
   useSeatOutGuest,
   useSettings,
   useTicket,
+  useUnassignGuest,
   useVoidItem,
 } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
@@ -48,6 +51,9 @@ export function TicketPanel({
   const voidItem = useVoidItem(ticketId);
   const seatOut = useSeatOutGuest();
   const rename = useRenameGuest();
+  const assign = useAssignGuest();
+  const unassign = useUnassignGuest();
+  const presentStaff = useAssignableStaff().data ?? [];
 
   const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split">(null);
   const [moveGuest, setMoveGuest] = useState<TicketView["guests"][number] | null>(null);
@@ -137,6 +143,48 @@ export function TicketPanel({
                         {yen(charge.timeChargeYen, locale)}
                       </span>
                     </div>
+                    {isOpen && seated && perms.canServe ? (
+                      <div className="mt-1 flex items-center gap-1">
+                        {g.assignment ? (
+                          <span className="inline-flex items-center gap-1 rounded bg-stone-800/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            👤 {g.assignment.staffName}
+                            <button
+                              className="opacity-70 hover:opacity-100"
+                              title={t("ticket.unassign")}
+                              disabled={unassign.isPending}
+                              onClick={() => unassign.mutate(g.id)}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ) : (
+                          <select
+                            className="rounded border border-stone-200 bg-white px-1 py-0.5 text-[11px] text-stone-500"
+                            value=""
+                            disabled={assign.isPending || presentStaff.length === 0}
+                            onChange={(e) =>
+                              e.target.value &&
+                              assign.mutate({ guestId: g.id, userId: e.target.value })
+                            }
+                          >
+                            <option value="">
+                              {presentStaff.length === 0
+                                ? t("board.noPresentStaff")
+                                : t("ticket.assignStaff")}
+                            </option>
+                            {presentStaff.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.displayName ?? s.username}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    ) : g.assignment ? (
+                      <div className="mt-1 text-[10px] font-medium text-stone-500">
+                        👤 {g.assignment.staffName}
+                      </div>
+                    ) : null}
                   </div>
                   {isOpen && seated && perms.canServe ? (
                     <div className="flex shrink-0 gap-0.5">

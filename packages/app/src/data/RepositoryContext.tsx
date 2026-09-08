@@ -37,6 +37,9 @@ export function RepositoryProvider({ children }: { children: ReactNode }): JSX.E
       if (event.startsWith("user.")) {
         void qc.invalidateQueries({ queryKey: ["users"] });
       }
+      if (event.startsWith("assignment.")) {
+        void qc.invalidateQueries({ queryKey: ["guests"] });
+      }
     });
   }, [repo, qc]);
 

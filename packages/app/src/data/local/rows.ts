@@ -1,6 +1,7 @@
 import type {
   BillingSettings,
   Guest,
+  GuestAssignment,
   Payment,
   Product,
   PublicUser,
@@ -89,6 +90,15 @@ export const toGuest = (r: Row): Guest => ({
   ticketId: sn(r.ticketId),
   status: s(r.status) as Guest["status"],
   seatLabel: sn(r.seatLabel),
+  assignment:
+    r.assignmentId == null
+      ? null
+      : {
+          id: s(r.assignmentId),
+          userId: s(r.assignmentUserId),
+          staffName: s(r.assignmentStaffName),
+          assignedAt: s(r.assignmentAssignedAt),
+        },
 });
 
 export const toItem = (r: Row): TicketItem => ({
@@ -136,7 +146,20 @@ export const toUser = (r: Row): PublicUser => ({
   id: s(r.id),
   username: s(r.username),
   displayName: sn(r.displayName),
+  jobTitle: sn(r.jobTitle),
   role: s(r.role) as PublicUser["role"],
   isActive: bool(r.isActive),
+  presence: (s(r.presence) || "ABSENT") as PublicUser["presence"],
+  presenceChangedAt: sn(r.presenceChangedAt),
   createdAt: s(r.createdAt),
+});
+
+export const toGuestAssignment = (r: Row): GuestAssignment => ({
+  id: s(r.id),
+  guestId: s(r.guestId),
+  userId: s(r.userId),
+  assignedByUserId: sn(r.assignedByUserId),
+  assignedAt: s(r.assignedAt),
+  endedAt: sn(r.endedAt),
+  endedReason: (sn(r.endedReason) as GuestAssignment["endedReason"]) ?? null,
 });

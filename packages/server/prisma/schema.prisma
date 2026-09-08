@@ -63,6 +63,12 @@ enum UserRole {
   SERVER
 }
 
+enum StaffPresence {
+  PRESENT
+  ABSENT
+  BREAK
+}
+
 // --- models -----------------------------------------------------------
 
 model Settings {
@@ -80,18 +86,24 @@ model Settings {
 }
 
 model User {
-  id            String         @id @default(uuid())
-  username      String         @unique
-  passwordHash  String
-  displayName   String?
-  role          UserRole       @default(SERVER)
-  isActive      Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
-  ticketItems   TicketItem[]
-  payments      Payment[]
-  auditLogs     AuditLog[]
+  id                String            @id @default(uuid())
+  username          String            @unique
+  passwordHash      String
+  displayName       String?
+  jobTitle          String?
+  role              UserRole          @default(SERVER)
+  isActive          Boolean           @default(true)
+  presence          StaffPresence     @default(ABSENT)
+  presenceChangedAt DateTime?
+  deletedAt         DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  refreshTokens     RefreshToken[]
+  ticketItems       TicketItem[]
+  payments          Payment[]
+  auditLogs         AuditLog[]
+  assignments       GuestAssignment[] @relation("AssignmentStaff")
+  assignmentsMade   GuestAssignment[] @relation("AssignmentBy")
 }
 
 model RefreshToken {
@@ -165,10 +177,29 @@ model Guest {
   createdAt                DateTime    @default(now())
   updatedAt                DateTime    @updatedAt
   items                    TicketItem[]
+  assignments              GuestAssignment[]
 
   @@index([ticketId])
   @@index([seatId])
   @@index([status])
+}
+
+// One staff↔guest assignment. Rows with `endedAt` set are kept as history.
+model GuestAssignment {
+  id               String    @id @default(uuid())
+  guestId          String
+  guest            Guest     @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation("AssignmentStaff", fields: [userId], references: [id])
+  assignedByUserId String?
+  assignedBy       User?     @relation("AssignmentBy", fields: [assignedByUserId], references: [id])
+  assignedAt       DateTime  @default(now())
+  endedAt          DateTime?
+  endedReason      String?
+
+  @@index([guestId])
+  @@index([userId])
+  @@index([endedAt])
 }
 
 model Product {

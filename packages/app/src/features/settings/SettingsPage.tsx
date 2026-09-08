@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { TimeRounding, UserRole } from "@snackmanager/shared";
-import { Badge, Button, Card, Field, Input, Select, Spinner } from "../../components/ui";
+import type { TimeRounding } from "@snackmanager/shared";
+import { Button, Card, Field, Input, Select, Spinner } from "../../components/ui";
 import { loadLocalConfig, saveLocalConfig, type DeployMode } from "../../lib/config";
 import { setLocale, storedLocale } from "../../i18n";
 import { useAuth } from "../../auth/AuthContext";
-import { useCreateUser, useSaveSettings, useSettings, useUsers } from "../../data/queries";
+import { useSaveSettings, useSettings } from "../../data/queries";
 import { getLocalDb, importLocalDb, resetLocalDb } from "../../data/local/db";
 
 export function SettingsPage(): JSX.Element {
@@ -184,77 +185,20 @@ export function SettingsPage(): JSX.Element {
         )}
       </Card>
 
-      {isAdmin ? <StaffCard /> : null}
-    </div>
-  );
-}
-
-function StaffCard(): JSX.Element {
-  const { t } = useTranslation();
-  const usersQ = useUsers();
-  const createUser = useCreateUser();
-  const [draft, setDraft] = useState({ username: "", password: "", role: "SERVER" as UserRole });
-
-  const add = (): void => {
-    createUser.mutate(
-      { username: draft.username.trim(), password: draft.password, role: draft.role },
-      { onSuccess: () => setDraft({ username: "", password: "", role: "SERVER" }) },
-    );
-  };
-
-  return (
-    <Card className="space-y-3 p-4">
-      <h2 className="text-sm font-semibold text-slate-700">{t("settings.staff")}</h2>
-      {usersQ.isLoading ? (
-        <Spinner />
-      ) : (
-        <ul className="divide-y divide-slate-100 text-sm">
-          {(usersQ.data ?? []).map((u) => (
-            <li key={u.id} className="flex items-center justify-between py-2">
-              <span>
-                {u.displayName ?? u.username} <span className="text-slate-400">@{u.username}</span>
-              </span>
-              <Badge tone={u.isActive ? "emerald" : "slate"}>{t(`settings.roles.${u.role}`)}</Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="flex flex-col gap-2 sm:grid sm:grid-cols-[1fr_1fr_140px_auto] sm:items-end">
-        <Field label={t("login.username")}>
-          <Input
-            value={draft.username}
-            onChange={(e) => setDraft({ ...draft, username: e.target.value })}
-          />
-        </Field>
-        <Field label={t("login.password")}>
-          <Input
-            type="password"
-            value={draft.password}
-            onChange={(e) => setDraft({ ...draft, password: e.target.value })}
-          />
-        </Field>
-        <Field label={t("settings.role")}>
-          <Select
-            value={draft.role}
-            onChange={(e) => setDraft({ ...draft, role: e.target.value as UserRole })}
-          >
-            <option value="ADMIN">{t("settings.roles.ADMIN")}</option>
-            <option value="CASHIER">{t("settings.roles.CASHIER")}</option>
-            <option value="SERVER">{t("settings.roles.SERVER")}</option>
-          </Select>
-        </Field>
-        <Button
-          size="sm"
-          disabled={!draft.username.trim() || draft.password.length < 8 || createUser.isPending}
-          onClick={add}
-        >
-          {t("settings.addStaff")}
-        </Button>
-      </div>
-      {createUser.isError ? (
-        <p className="text-sm text-rose-600">{(createUser.error as Error).message}</p>
+      {isAdmin ? (
+        <Card className="flex items-center justify-between p-4">
+          <div>
+            <h2 className="text-sm font-semibold text-stone-700">{t("settings.staff")}</h2>
+            <p className="text-xs text-stone-400">{t("staff.title")}</p>
+          </div>
+          <Link to="/staff">
+            <Button size="sm" variant="secondary">
+              {t("settings.manageStaff")}
+            </Button>
+          </Link>
+        </Card>
       ) : null}
-    </Card>
+    </div>
   );
 }
 

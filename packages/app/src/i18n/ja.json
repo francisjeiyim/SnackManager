@@ -6,6 +6,7 @@
     "invoices": "会計履歴",
     "reports": "日報",
     "products": "商品",
+    "staff": "スタッフ",
     "settings": "設定",
     "logout": "ログアウト"
   },
@@ -74,10 +75,12 @@
     "noRoomsHint": "レイアウト画面で部屋と座席を作成してください。",
     "seatIn": "客を案内",
     "openTicket": "伝票を開く",
-    "tables": "利用中テーブル",
+    "seatsInUse": "利用中の座席",
     "guestsCount": "客数",
     "running": "現在の売上",
-    "longest": "最長滞在"
+    "longest": "最長滞在",
+    "multi": "相席",
+    "noPresentStaff": "出勤中のスタッフがいません。先に出勤にしてください"
   },
   "seatIn": {
     "title": "客を案内",
@@ -111,6 +114,9 @@
     "leave": "退店",
     "move": "移動",
     "closed": "会計を締めました",
+    "assignStaff": "担当を割当",
+    "assignedTo": "担当: {{name}}",
+    "unassign": "担当を外す",
     "status": {
       "OPEN": "オープン",
       "CLOSED": "クローズ",
@@ -215,8 +221,35 @@
     "save": "保存",
     "saved": "保存しました",
     "staff": "スタッフ",
+    "manageStaff": "スタッフ管理",
     "addStaff": "スタッフを追加",
     "role": "役割",
+    "roles": { "ADMIN": "管理者", "CASHIER": "レジ", "SERVER": "ホール" }
+  },
+  "staff": {
+    "title": "スタッフ",
+    "add": "スタッフを追加",
+    "edit": "編集",
+    "name": "名前",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "job": "職種",
+    "jobPlaceholder": "例: ホール、キッチン、店長",
+    "role": "役割",
+    "active": "有効",
+    "presence": "勤務状態",
+    "present": "出勤",
+    "absent": "退勤",
+    "break": "休憩",
+    "since": "{{time}}から",
+    "resetPassword": "パスワード再設定",
+    "newPassword": "新しいパスワード",
+    "delete": "削除",
+    "deleteConfirm": "{{name}} を削除しますか？元に戻せません。",
+    "deleteBlocked": "このアカウントには利用記録があるため、削除せず無効化しました。",
+    "lastAdmin": "有効な管理者が最低1人必要です。",
+    "selfForbidden": "自分のアカウントは無効化・削除できません。",
+    "empty": "スタッフがいません",
     "roles": { "ADMIN": "管理者", "CASHIER": "レジ", "SERVER": "ホール" }
   },
   "common": {

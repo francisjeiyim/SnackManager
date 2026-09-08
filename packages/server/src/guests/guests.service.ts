@@ -10,9 +10,18 @@ import { SettingsService } from "../settings/settings.service";
 import { EventsGateway } from "../events/events.gateway";
 import { AuditService } from "../audit/audit.service";
 import { TicketsService } from "../tickets/tickets.service";
-import { toBillingSettings, toGuest } from "../common/mappers";
+import { toBillingSettings, toGuest, toPublicUser } from "../common/mappers";
 
-const withSeat = { seat: { select: { label: true } } } as const;
+/** Everything the board / ticket panel needs about a guest in one query. */
+const withSeat = {
+  seat: { select: { label: true } },
+  assignments: {
+    where: { endedAt: null },
+    include: {
+      user: { select: { id: true, displayName: true, username: true } },
+    },
+  },
+} as const;
 
 @Injectable()
 export class GuestsService {
@@ -23,6 +32,15 @@ export class GuestsService {
     private readonly audit: AuditService,
     private readonly tickets: TicketsService,
   ) {}
+
+  /** Present, active staff — the pick list for assigning a guest to someone. */
+  async assignableStaff() {
+    const staff = await this.prisma.user.findMany({
+      where: { deletedAt: null, isActive: true, presence: { not: "ABSENT" } },
+      orderBy: [{ displayName: "asc" }, { username: "asc" }],
+    });
+    return staff.map(toPublicUser);
+  }
 
   /** Every currently seated guest — the raw material for the live board. */
   async active() {
@@ -98,7 +116,7 @@ export class GuestsService {
         settings,
         now.toISOString(),
       );
-      return tx.guest.update({
+      const g = await tx.guest.update({
         where: { id: guestId },
         data: {
           status: "CLOSED",
@@ -107,6 +125,11 @@ export class GuestsService {
           timeChargeYen: charge.timeChargeYen,
         },
       });
+      await tx.guestAssignment.updateMany({
+        where: { guestId, endedAt: null },
+        data: { endedAt: now, endedReason: "GUEST_LEFT" },
+      });
+      return g;
     });
 
     if (updated.ticketId) await this.tickets.refreshTotals(updated.ticketId);
@@ -149,5 +172,66 @@ export class GuestsService {
       this.events.emitEvent(ServiceEvent.TICKET_UPDATED, await this.tickets.get(guest.ticketId));
     }
     return toGuest(guest);
+  }
+
+  /**
+   * Put a staff member in charge of a guest. Any staff currently assigned to
+   * this guest is released (kept as history, `endedReason: REASSIGNED`).
+   */
+  async assign(guestId: string, staffUserId: string, byUserId?: string) {
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const guest = await tx.guest.findUnique({ where: { id: guestId } });
+      if (!guest) throw new NotFoundException("guest not found");
+      if (guest.status !== "SEATED") throw new ConflictException("guest is no longer seated");
+
+      const staff = await tx.user.findFirst({
+        where: { id: staffUserId, deletedAt: null, isActive: true },
+      });
+      if (!staff) throw new NotFoundException("staff member not found or inactive");
+
+      await tx.guestAssignment.updateMany({
+        where: { guestId, endedAt: null },
+        data: { endedAt: now, endedReason: "REASSIGNED" },
+      });
+      await tx.guestAssignment.create({
+        data: { guestId, userId: staffUserId, assignedByUserId: byUserId ?? null, assignedAt: now },
+      });
+    });
+
+    await this.audit.record({
+      action: AuditAction.STAFF_ASSIGN,
+      entityType: "guest",
+      entityId: guestId,
+      userId: byUserId,
+      data: { staffUserId },
+    });
+    return this.emitGuest(guestId);
+  }
+
+  /** Release the staff member currently assigned to a guest. */
+  async unassign(guestId: string, byUserId?: string) {
+    const ended = await this.prisma.guestAssignment.updateMany({
+      where: { guestId, endedAt: null },
+      data: { endedAt: new Date(), endedReason: "MANUAL" },
+    });
+    if (ended.count === 0) throw new NotFoundException("no active assignment");
+    await this.audit.record({
+      action: AuditAction.STAFF_UNASSIGN,
+      entityType: "guest",
+      entityId: guestId,
+      userId: byUserId,
+    });
+    return this.emitGuest(guestId);
+  }
+
+  /** Re-read a guest with its full graph and broadcast the change. */
+  private async emitGuest(guestId: string) {
+    const guest = await this.prisma.guest.findUnique({ where: { id: guestId }, include: withSeat });
+    if (!guest) throw new NotFoundException("guest not found");
+    const dto = toGuest(guest);
+    this.events.emitEvent(ServiceEvent.SEAT_UPDATED, dto, guest.roomId);
+    this.events.emitEvent(ServiceEvent.ASSIGNMENT_UPDATED, dto, guest.roomId);
+    return dto;
   }
 }

@@ -18,8 +18,10 @@ import type {
   SeatInput,
   SeatPatch,
   SettingsUpdateInput,
+  StaffPresence,
   TicketPatchInput,
   UserCreateInput,
+  UserUpdateInput,
 } from "@snackmanager/shared";
 
 export interface RoomWithSeats extends Room {
@@ -102,10 +104,13 @@ export interface SnackRepository {
   deleteProduct(id: string): Promise<void>;
 
   activeGuests(): Promise<Guest[]>;
+  assignableStaff(): Promise<PublicUser[]>;
   seatIn(input: SeatInInput): Promise<SeatInResult>;
   moveGuest(guestId: string, toSeatId: string): Promise<Guest>;
   seatOutGuest(guestId: string): Promise<Guest>;
   renameGuest(guestId: string, displayName: string | null): Promise<Guest>;
+  assignGuest(guestId: string, userId: string): Promise<Guest>;
+  unassignGuest(guestId: string): Promise<Guest>;
 
   liveTickets(): Promise<TicketView[]>;
   listTickets(params?: {
@@ -126,7 +131,11 @@ export interface SnackRepository {
 
   listUsers(): Promise<PublicUser[]>;
   createUser(input: UserCreateInput): Promise<PublicUser>;
+  updateUser(id: string, patch: UserUpdateInput): Promise<PublicUser>;
   setUserActive(id: string, isActive: boolean): Promise<PublicUser>;
+  setUserPresence(id: string, presence: StaffPresence): Promise<PublicUser>;
+  resetUserPassword(id: string, password: string): Promise<void>;
+  deleteUser(id: string): Promise<void>;
 
   /** Real-time change feed. Returns an unsubscribe function. */
   subscribe(listener: ServiceListener): () => void;

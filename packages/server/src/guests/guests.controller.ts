@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from "@nestjs/common";
 import {
   schemas,
   UserRole,
+  type AssignGuestInput,
   type GuestPatchInput,
   type MoveGuestInput,
   type SeatInInput,
@@ -22,6 +23,11 @@ export class GuestsController {
   @Get("active")
   active() {
     return this.guests.active();
+  }
+
+  @Get("assignable-staff")
+  assignableStaff() {
+    return this.guests.assignableStaff();
   }
 
   @Post("seat-in")
@@ -50,5 +56,19 @@ export class GuestsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.guests.rename(id, dto.displayName, user?.id);
+  }
+
+  @Put(":id/assignment")
+  assign(
+    @Param("id") id: string,
+    @Body(new ZodBody(schemas.assignGuestSchema)) dto: AssignGuestInput,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.guests.assign(id, dto.userId, user?.id);
+  }
+
+  @Delete(":id/assignment")
+  unassign(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.guests.unassign(id, user?.id);
   }
 }

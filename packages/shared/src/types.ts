@@ -1,4 +1,5 @@
 import type {
+  AssignmentEndReason,
   AuditAction,
   Currency,
   GuestStatus,
@@ -6,6 +7,7 @@ import type {
   PaymentMethod,
   SeatKind,
   SeatShape,
+  StaffPresence,
   TicketStatus,
   TimeRounding,
   UserRole,
@@ -94,6 +96,27 @@ export interface Guest {
   status: GuestStatus;
   /** Derived from the seat (not persisted on the guest). */
   seatLabel?: string | null;
+  /** Active staff assignment, if any (derived, not persisted on the guest). */
+  assignment?: GuestAssignmentBrief | null;
+}
+
+/** The current staff↔guest assignment as shown on the board / ticket panel. */
+export interface GuestAssignmentBrief {
+  id: string;
+  userId: string;
+  staffName: string;
+  assignedAt: IsoDateTime;
+}
+
+/** One staff↔guest assignment row. Closed rows (`endedAt` set) are history. */
+export interface GuestAssignment {
+  id: string;
+  guestId: string;
+  userId: string;
+  assignedByUserId: string | null;
+  assignedAt: IsoDateTime;
+  endedAt: IsoDateTime | null;
+  endedReason: AssignmentEndReason | null;
 }
 
 export interface Product {
@@ -153,7 +176,12 @@ export interface PublicUser {
   username: string;
   displayName: string | null;
   role: UserRole;
+  /** Free-text job (e.g. "Serveuse", "Cuisine"), distinct from the app role. */
+  jobTitle: string | null;
   isActive: boolean;
+  /** On-the-floor status, set by an admin. */
+  presence: StaffPresence;
+  presenceChangedAt: IsoDateTime | null;
   createdAt: IsoDateTime;
 }
 

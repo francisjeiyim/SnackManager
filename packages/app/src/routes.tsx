@@ -6,6 +6,7 @@ import { LayoutEditorPage } from "./features/layout-editor/LayoutEditorPage";
 import { ProductsPage } from "./features/products/ProductsPage";
 import { ReportsPage } from "./features/reports/ReportsPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
+import { StaffPage } from "./features/staff/StaffPage";
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
       { path: "invoices", element: <InvoicesPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "products", element: <ProductsPage /> },
+      { path: "staff", element: <StaffPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
   },

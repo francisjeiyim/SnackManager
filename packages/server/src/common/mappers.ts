@@ -1,5 +1,6 @@
 import type {
   Guest as PGuest,
+  GuestAssignment as PGuestAssignment,
   Payment as PPayment,
   Product as PProduct,
   Room as PRoom,
@@ -10,8 +11,10 @@ import type {
   User as PUser,
 } from "@prisma/client";
 import type {
+  AssignmentEndReason,
   BillingSettings,
   Guest,
+  GuestAssignment,
   Payment,
   Product,
   PublicUser,
@@ -82,22 +85,52 @@ export const toProduct = (r: PProduct): Product => ({
   emoji: r.emoji,
 });
 
-type PGuestWithSeat = PGuest & { seat?: { label: string } | null };
+type PAssignmentWithStaff = PGuestAssignment & {
+  user?: { id: string; displayName: string | null; username: string } | null;
+};
+type PGuestWithSeat = PGuest & {
+  seat?: { label: string } | null;
+  assignments?: PAssignmentWithStaff[] | null;
+};
 
-export const toGuest = (r: PGuestWithSeat): Guest => ({
+const staffName = (u: PAssignmentWithStaff["user"]): string =>
+  u?.displayName?.trim() || u?.username || "";
+
+export const toGuest = (r: PGuestWithSeat): Guest => {
+  const active = (r.assignments ?? []).find((a) => a.endedAt == null) ?? null;
+  return {
+    id: r.id,
+    seatId: r.seatId,
+    roomId: r.roomId,
+    partyId: r.partyId,
+    displayName: r.displayName,
+    arrivalAt: iso(r.arrivalAt),
+    closedAt: isoOrNull(r.closedAt),
+    ratePerMinuteYenSnapshot: r.ratePerMinuteYenSnapshot,
+    billedMinutes: r.billedMinutes,
+    timeChargeYen: r.timeChargeYen,
+    ticketId: r.ticketId,
+    status: r.status,
+    seatLabel: r.seat?.label ?? null,
+    assignment: active
+      ? {
+          id: active.id,
+          userId: active.userId,
+          staffName: staffName(active.user),
+          assignedAt: iso(active.assignedAt),
+        }
+      : null,
+  };
+};
+
+export const toGuestAssignment = (r: PGuestAssignment): GuestAssignment => ({
   id: r.id,
-  seatId: r.seatId,
-  roomId: r.roomId,
-  partyId: r.partyId,
-  displayName: r.displayName,
-  arrivalAt: iso(r.arrivalAt),
-  closedAt: isoOrNull(r.closedAt),
-  ratePerMinuteYenSnapshot: r.ratePerMinuteYenSnapshot,
-  billedMinutes: r.billedMinutes,
-  timeChargeYen: r.timeChargeYen,
-  ticketId: r.ticketId,
-  status: r.status,
-  seatLabel: r.seat?.label ?? null,
+  guestId: r.guestId,
+  userId: r.userId,
+  assignedByUserId: r.assignedByUserId,
+  assignedAt: iso(r.assignedAt),
+  endedAt: isoOrNull(r.endedAt),
+  endedReason: (r.endedReason as AssignmentEndReason | null) ?? null,
 });
 
 export const toTicketItem = (r: PTicketItem): TicketItem => ({
@@ -145,8 +178,11 @@ export const toPublicUser = (r: PUser): PublicUser => ({
   id: r.id,
   username: r.username,
   displayName: r.displayName,
+  jobTitle: r.jobTitle,
   role: r.role,
   isActive: r.isActive,
+  presence: r.presence,
+  presenceChangedAt: isoOrNull(r.presenceChangedAt),
   createdAt: iso(r.createdAt),
 });
 

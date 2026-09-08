@@ -9,8 +9,10 @@ import type {
   SeatInput,
   SeatPatch,
   SettingsUpdateInput,
+  StaffPresence,
   TicketPatchInput,
   UserCreateInput,
+  UserUpdateInput,
 } from "@snackmanager/shared";
 import { useRepository } from "./RepositoryContext";
 import type { SplitBody } from "./repository";
@@ -96,6 +98,16 @@ export function useTicket(id: string | null) {
 export function useUsers() {
   const repo = useRepository();
   return useQuery({ queryKey: keys.users, queryFn: () => repo.listUsers() });
+}
+
+/** Present, active staff — the pick list for assigning a guest. */
+export function useAssignableStaff() {
+  const repo = useRepository();
+  return useQuery({
+    queryKey: ["users", "assignable"],
+    queryFn: () => repo.assignableStaff(),
+    staleTime: 10_000,
+  });
 }
 
 /** Invalidate the queries touched by any ticket/guest mutation. */
@@ -245,6 +257,51 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: (input: UserCreateInput) => repo.createUser(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
+  });
+}
+
+/** Edit / presence / password / delete for one staff account. */
+export function useStaffMutations() {
+  const repo = useRepository();
+  const qc = useQueryClient();
+  const invalidate = (): Promise<void> => qc.invalidateQueries({ queryKey: keys.users });
+  return {
+    update: useMutation({
+      mutationFn: (v: { id: string; patch: UserUpdateInput }) => repo.updateUser(v.id, v.patch),
+      onSuccess: invalidate,
+    }),
+    setPresence: useMutation({
+      mutationFn: (v: { id: string; presence: StaffPresence }) =>
+        repo.setUserPresence(v.id, v.presence),
+      onSuccess: invalidate,
+    }),
+    resetPassword: useMutation({
+      mutationFn: (v: { id: string; password: string }) =>
+        repo.resetUserPassword(v.id, v.password),
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => repo.deleteUser(id),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+/** Assign / release the staff member in charge of a guest. */
+export function useAssignGuest() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (v: { guestId: string; userId: string }) => repo.assignGuest(v.guestId, v.userId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUnassignGuest() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (guestId: string) => repo.unassignGuest(guestId),
+    onSuccess: invalidate,
   });
 }
 

@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { Locale, PaymentMethod, SeatKind, SeatShape, TimeRounding, UserRole } from "./enums.js";
+import {
+  Locale,
+  PaymentMethod,
+  SeatKind,
+  SeatShape,
+  StaffPresence,
+  TimeRounding,
+  UserRole,
+} from "./enums.js";
 
 const yen = z.number().int();
 const positiveInt = z.number().int().positive();
@@ -180,6 +188,35 @@ export const userCreateSchema = z.object({
   username: z.string().min(1).max(60),
   password: z.string().min(8).max(200),
   displayName: z.string().min(1).max(80).nullable().optional(),
+  jobTitle: z.string().min(1).max(60).nullable().optional(),
   role: userRoleSchema,
 });
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
+
+/** Partial edit of an existing account (Staff screen). */
+export const userUpdateSchema = z
+  .object({
+    displayName: z.string().min(1).max(80).nullable(),
+    jobTitle: z.string().min(1).max(60).nullable(),
+    role: userRoleSchema,
+    isActive: z.boolean(),
+  })
+  .partial();
+export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+export const passwordResetSchema = z.object({
+  password: z.string().min(8).max(200),
+});
+export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
+
+export const presenceSchema = z.object({
+  presence: z.nativeEnum(StaffPresence),
+});
+export type PresenceInput = z.infer<typeof presenceSchema>;
+
+// --- Staff ↔ guest assignment -------------------------------------------
+
+export const assignGuestSchema = z.object({
+  userId: id,
+});
+export type AssignGuestInput = z.infer<typeof assignGuestSchema>;

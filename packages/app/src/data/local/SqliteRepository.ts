@@ -17,9 +17,11 @@ import {
   type SeatInput,
   type SeatPatch,
   type SettingsUpdateInput,
+  type StaffPresence,
   type TicketBundle,
   type TicketPatchInput,
   type UserCreateInput,
+  type UserUpdateInput,
 } from "@snackmanager/shared";
 import { serviceDayOf } from "../../lib/serviceDay";
 import type {
@@ -49,8 +51,15 @@ const uuid = (): string => crypto.randomUUID();
 const nowIso = (): string => new Date().toISOString();
 const CHANNEL = "snackmanager-service";
 
-/** Guest columns + the seat label (derived, not a Guest column). */
-const GUEST_SELECT = `SELECT g.*, s."label" AS "seatLabel" FROM "Guest" g LEFT JOIN "Seat" s ON s."id" = g."seatId"`;
+/** Guest columns + the seat label and the active staff assignment (all derived). */
+const GUEST_SELECT = `SELECT g.*, s."label" AS "seatLabel",
+    a."id" AS "assignmentId", a."userId" AS "assignmentUserId",
+    a."assignedAt" AS "assignmentAssignedAt",
+    COALESCE(NULLIF(TRIM(u."displayName"), ''), u."username") AS "assignmentStaffName"
+  FROM "Guest" g
+  LEFT JOIN "Seat" s ON s."id" = g."seatId"
+  LEFT JOIN "GuestAssignment" a ON a."guestId" = g."id" AND a."endedAt" IS NULL
+  LEFT JOIN "User" u ON u."id" = a."userId"`;
 
 async function sha256(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -315,6 +324,16 @@ export class SqliteRepository implements SnackRepository {
     return db.all(`${GUEST_SELECT} WHERE g."status"='SEATED' ORDER BY g."arrivalAt"`).map(toGuest);
   }
 
+  async assignableStaff() {
+    const db = await this.ready;
+    return db
+      .all(
+        `SELECT * FROM "User" WHERE "deletedAt" IS NULL AND "isActive"=1 AND "presence"<>'ABSENT'
+         ORDER BY "displayName", "username"`,
+      )
+      .map(toUser);
+  }
+
   async seatIn(input: SeatInInput): Promise<SeatInResult> {
     const db = await this.ready;
     const settings = await this.settings();
@@ -465,6 +484,10 @@ export class SqliteRepository implements SnackRepository {
       `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"updatedAt"=? WHERE "id"=?`,
       [at, charge.billedMinutes, charge.timeChargeYen, at, guestId],
     );
+    db.run(
+      `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='GUEST_LEFT' WHERE "guestId"=? AND "endedAt" IS NULL`,
+      [at, guestId],
+    );
     if (guest.ticketId) this.recompute(db, guest.ticketId, settings);
     const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
     this.emit("guest.closed", updated);
@@ -489,6 +512,44 @@ export class SqliteRepository implements SnackRepository {
     if (existing.ticketId) {
       this.emit("ticket.updated", this.present(db, existing.ticketId, await this.settings()));
     }
+    return updated;
+  }
+
+  async assignGuest(guestId: string, userId: string) {
+    const db = await this.ready;
+    const guest = db.get<{ status: string }>(`SELECT "status" FROM "Guest" WHERE "id"=?`, [guestId]);
+    if (!guest) throw new BillingError("guest not found", "NOT_FOUND");
+    if (guest.status !== "SEATED") throw new BillingError("guest not seated", "GUEST_CLOSED");
+    const staff = db.get(
+      `SELECT "id" FROM "User" WHERE "id"=? AND "deletedAt" IS NULL AND "isActive"=1`,
+      [userId],
+    );
+    if (!staff) throw new BillingError("staff not found", "NOT_FOUND");
+    const at = nowIso();
+    db.run(
+      `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='REASSIGNED' WHERE "guestId"=? AND "endedAt" IS NULL`,
+      [at, guestId],
+    );
+    db.run(
+      `INSERT INTO "GuestAssignment" ("id","guestId","userId","assignedByUserId","assignedAt") VALUES (?,?,?,?,?)`,
+      [uuid(), guestId, userId, null, at],
+    );
+    const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
+    this.emit("seat.updated", updated);
+    this.emit("assignment.updated", updated);
+    return updated;
+  }
+
+  async unassignGuest(guestId: string) {
+    const db = await this.ready;
+    const at = nowIso();
+    db.run(
+      `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='MANUAL' WHERE "guestId"=? AND "endedAt" IS NULL`,
+      [at, guestId],
+    );
+    const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
+    this.emit("seat.updated", updated);
+    this.emit("assignment.updated", updated);
     return updated;
   }
 
@@ -632,6 +693,10 @@ export class SqliteRepository implements SnackRepository {
         db.run(
           `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"updatedAt"=? WHERE "id"=?`,
           [g.closedAt, g.billedMinutes, g.timeChargeYen, nowIso(), g.guestId],
+        );
+        db.run(
+          `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='GUEST_LEFT' WHERE "guestId"=? AND "endedAt" IS NULL`,
+          [at, g.guestId],
         );
       }
       db.run(
@@ -876,7 +941,9 @@ export class SqliteRepository implements SnackRepository {
 
   async listUsers() {
     const db = await this.ready;
-    return db.all(`SELECT * FROM "User" ORDER BY "createdAt"`).map(toUser);
+    return db
+      .all(`SELECT * FROM "User" WHERE "deletedAt" IS NULL ORDER BY "createdAt"`)
+      .map(toUser);
   }
 
   async createUser(input: UserCreateInput) {
@@ -884,21 +951,83 @@ export class SqliteRepository implements SnackRepository {
     const id = uuid();
     const hash = await sha256(input.password);
     db.run(
-      `INSERT INTO "User" ("id","username","passwordHash","displayName","role","isActive","createdAt","updatedAt")
-       VALUES (?,?,?,?,?,1,?,?)`,
-      [id, input.username, hash, input.displayName ?? null, input.role, nowIso(), nowIso()],
+      `INSERT INTO "User" ("id","username","passwordHash","displayName","jobTitle","role","isActive","presence","createdAt","updatedAt")
+       VALUES (?,?,?,?,?,?,1,'ABSENT',?,?)`,
+      [
+        id,
+        input.username,
+        hash,
+        input.displayName ?? null,
+        input.jobTitle ?? null,
+        input.role,
+        nowIso(),
+        nowIso(),
+      ],
     );
     return toUser(db.get(`SELECT * FROM "User" WHERE "id"=?`, [id]) ?? {});
   }
 
-  async setUserActive(id: string, isActive: boolean) {
+  async updateUser(id: string, patch: UserUpdateInput) {
     const db = await this.ready;
-    db.run(`UPDATE "User" SET "isActive"=?,"updatedAt"=? WHERE "id"=?`, [
-      isActive ? 1 : 0,
+    const cols: Record<string, unknown> = {};
+    if (patch.displayName !== undefined) cols.displayName = patch.displayName;
+    if (patch.jobTitle !== undefined) cols.jobTitle = patch.jobTitle;
+    if (patch.role !== undefined) cols.role = patch.role;
+    if (patch.isActive !== undefined) cols.isActive = patch.isActive ? 1 : 0;
+    if (Object.keys(cols).length) {
+      cols.updatedAt = nowIso();
+      this.setColumns(db, "User", id, cols);
+    }
+    return toUser(db.get(`SELECT * FROM "User" WHERE "id"=?`, [id]) ?? {});
+  }
+
+  async setUserActive(id: string, isActive: boolean) {
+    return this.updateUser(id, { isActive });
+  }
+
+  async setUserPresence(id: string, presence: StaffPresence) {
+    const db = await this.ready;
+    db.run(`UPDATE "User" SET "presence"=?,"presenceChangedAt"=?,"updatedAt"=? WHERE "id"=?`, [
+      presence,
+      nowIso(),
       nowIso(),
       id,
     ]);
     return toUser(db.get(`SELECT * FROM "User" WHERE "id"=?`, [id]) ?? {});
+  }
+
+  async resetUserPassword(id: string, password: string) {
+    const db = await this.ready;
+    db.run(`UPDATE "User" SET "passwordHash"=?,"updatedAt"=? WHERE "id"=?`, [
+      await sha256(password),
+      nowIso(),
+      id,
+    ]);
+    db.run(
+      `UPDATE "RefreshToken" SET "revokedAt"=? WHERE "userId"=? AND "revokedAt" IS NULL`,
+      [nowIso(), id],
+    );
+  }
+
+  async deleteUser(id: string) {
+    const db = await this.ready;
+    const used =
+      (db.get<{ n: number }>(
+        `SELECT
+           (SELECT COUNT(*) FROM "TicketItem" WHERE "addedByUserId"=?) +
+           (SELECT COUNT(*) FROM "Payment" WHERE "receivedByUserId"=?) +
+           (SELECT COUNT(*) FROM "AuditLog" WHERE "userId"=?) AS n`,
+        [id, id, id],
+      )?.n ?? 0) > 0;
+    if (used) {
+      db.run(`UPDATE "User" SET "deletedAt"=?,"isActive"=0,"updatedAt"=? WHERE "id"=?`, [
+        nowIso(),
+        nowIso(),
+        id,
+      ]);
+    } else {
+      db.run(`DELETE FROM "User" WHERE "id"=?`, [id]);
+    }
   }
 
   // --- helpers ---------------------------------------------

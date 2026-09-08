@@ -23,9 +23,16 @@ async function main(): Promise<void> {
     ["service", "service1234", "SERVER", "ホール Server"],
   ];
   for (const [username, password, role, displayName] of staff) {
+    const presence = role === "ADMIN" ? "PRESENT" : "ABSENT";
     await prisma.user.upsert({
       where: { username },
-      create: { username, role, displayName, passwordHash: await bcrypt.hash(password, 10) },
+      create: {
+        username,
+        role,
+        displayName,
+        presence,
+        passwordHash: await bcrypt.hash(password, 10),
+      },
       update: { role, displayName },
     });
   }
