@@ -1,0 +1,97 @@
+# SnackManager — test deployment behind a dedicated Cloudflare Tunnel.
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+#
+# One public hostname (PUBLIC_ORIGIN) serves the SPA, /api and /socket.io.
+name: snackmanager-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-snackmanager}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-snackmanager}
+    volumes:
+      - sm_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-snackmanager} -d ${POSTGRES_DB:-snackmanager}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [sm_prod]
+
+  server:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      SERVER_PORT: 4100
+      DATABASE_URL: postgresql://${POSTGRES_USER:-snackmanager}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-snackmanager}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+      CORS_ORIGINS: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4100/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [sm_prod]
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/app/Dockerfile
+      args:
+        VITE_API_URL: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
+        VITE_DEFAULT_MODE: server
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    networks: [sm_prod]
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.8.3
+    restart: unless-stopped
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --protocol
+      - http2
+      - run
+      - --credentials-file
+      - /etc/cloudflared/credentials.json
+      - --url
+      - http://web:80
+      - ${CLOUDFLARE_TUNNEL_ID:?CLOUDFLARE_TUNNEL_ID is required}
+    volumes:
+      - type: bind
+        source: ${CLOUDFLARED_CREDENTIALS_PATH:?CLOUDFLARED_CREDENTIALS_PATH is required}
+        target: /etc/cloudflared/credentials.json
+        read_only: true
+    depends_on:
+      web:
+        condition: service_started
+    networks: [sm_prod]
+
+volumes:
+  sm_pgdata:
+
+networks:
+  sm_prod:
+    driver: bridge

@@ -16,7 +16,7 @@ offline**.
 
 Docs: [ARCHITECTURE](docs/ARCHITECTURE.md) · [DATA-MODEL](docs/DATA-MODEL.md) ·
 [BILLING](docs/BILLING.md) · [API](docs/API.md) · [MODES](docs/MODES.md) ·
-[INSTALL](docs/INSTALL.md)
+[INSTALL](docs/INSTALL.md) · [DEPLOY](docs/DEPLOY.md)
 
 ## Features
 
@@ -70,6 +70,16 @@ pnpm --filter @snackmanager/app dev
 
 Open Settings → set mode to **Standalone** → reload. No server needed; the app
 seeds its own in-browser SQLite database on first run.
+
+## Deploy — test subdomain (client/server)
+
+```bash
+cp .env.prod.example .env.prod   # fill in secrets + Cloudflare Tunnel id
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+One HTTPS hostname serves the SPA, `/api` and `/socket.io` behind a dedicated
+Cloudflare Tunnel. Full steps: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Test / lint / build
 

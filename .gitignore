@@ -18,6 +18,10 @@ coverage/
 .env
 .env.local
 .env.*.local
+.env.prod
+# Cloudflare tunnel credentials must stay out of the repo
+*.tunnel.json
+cloudflared-credentials*.json
 
 # prisma
 packages/server/prisma/*.db
