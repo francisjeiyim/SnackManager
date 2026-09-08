@@ -17,6 +17,13 @@ import type {
 import { useRepository } from "./RepositoryContext";
 import type { SplitBody } from "./repository";
 
+/**
+ * Poll interval for state that other connected clients change. The socket makes
+ * these updates instant when it can connect; this is the reliable floor when it
+ * can't (e.g. a proxy that refuses the transport).
+ */
+const LIVE_MS = 4000;
+
 export const keys = {
   settings: ["settings"] as const,
   rooms: ["rooms"] as const,
@@ -30,12 +37,20 @@ export const keys = {
 
 export function useSettings() {
   const repo = useRepository();
-  return useQuery({ queryKey: keys.settings, queryFn: () => repo.getSettings() });
+  return useQuery({
+    queryKey: keys.settings,
+    queryFn: () => repo.getSettings(),
+    refetchInterval: LIVE_MS,
+  });
 }
 
 export function useRooms() {
   const repo = useRepository();
-  return useQuery({ queryKey: keys.rooms, queryFn: () => repo.listRooms() });
+  return useQuery({
+    queryKey: keys.rooms,
+    queryFn: () => repo.listRooms(),
+    refetchInterval: LIVE_MS,
+  });
 }
 
 export function useProducts(includeInactive = false) {
@@ -48,7 +63,11 @@ export function useProducts(includeInactive = false) {
 
 export function useActiveGuests() {
   const repo = useRepository();
-  return useQuery({ queryKey: keys.activeGuests, queryFn: () => repo.activeGuests() });
+  return useQuery({
+    queryKey: keys.activeGuests,
+    queryFn: () => repo.activeGuests(),
+    refetchInterval: LIVE_MS,
+  });
 }
 
 export function useLiveTickets() {
@@ -56,7 +75,7 @@ export function useLiveTickets() {
   return useQuery({
     queryKey: keys.liveTickets,
     queryFn: () => repo.liveTickets(),
-    refetchInterval: 20_000,
+    refetchInterval: LIVE_MS,
   });
 }
 
@@ -92,12 +111,17 @@ export function useTicket(id: string | null) {
     queryKey: keys.ticket(id ?? "none"),
     queryFn: () => repo.getTicket(id as string),
     enabled: !!id,
+    refetchInterval: LIVE_MS,
   });
 }
 
 export function useUsers() {
   const repo = useRepository();
-  return useQuery({ queryKey: keys.users, queryFn: () => repo.listUsers() });
+  return useQuery({
+    queryKey: keys.users,
+    queryFn: () => repo.listUsers(),
+    refetchInterval: LIVE_MS,
+  });
 }
 
 /** Present, active staff — the pick list for assigning a guest. */
@@ -106,7 +130,7 @@ export function useAssignableStaff() {
   return useQuery({
     queryKey: ["users", "assignable"],
     queryFn: () => repo.assignableStaff(),
-    staleTime: 10_000,
+    refetchInterval: LIVE_MS,
   });
 }
 

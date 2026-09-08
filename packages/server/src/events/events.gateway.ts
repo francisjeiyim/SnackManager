@@ -15,7 +15,13 @@ import { ServiceEvent } from "@snackmanager/shared";
  * namespace and `join` the rooms (by `Room.id`) they are displaying; mutations
  * elsewhere in the app emit here.
  */
-@WebSocketGateway({ namespace: "/service", cors: true })
+@WebSocketGateway({
+  namespace: "/service",
+  cors: true,
+  // Keep long-polling connections alive through buffering proxies / tunnels.
+  pingInterval: 15_000,
+  pingTimeout: 20_000,
+})
 export class EventsGateway implements OnGatewayConnection {
   private readonly logger = new Logger("EventsGateway");
 

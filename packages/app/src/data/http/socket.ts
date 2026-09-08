@@ -17,7 +17,12 @@ export class ServiceSocket {
   private ensure(): Socket {
     if (this.socket) return this.socket;
     const socket = io(`${this.baseUrl}/service`, {
-      transports: ["websocket"],
+      // The Cloudflare tunnel in front of prod refuses the WebSocket upgrade
+      // (502) and a half-upgraded engine.io session then thrashes. Long-polling
+      // alone is rock-solid through the tunnel and still near-instant, so pin
+      // the transport and disable the upgrade probe entirely.
+      transports: ["polling"],
+      upgrade: false,
       auth: () => ({ token: authStore.get().accessToken }),
     });
     socket.onAny((event: string, payload: unknown) => {

@@ -86,6 +86,13 @@ export function RoomCanvas({
         const style = stateStyles[state];
         const ticketId = guests[0]?.ticketId ?? null;
         const assignment = guests.find((g) => g.assignment)?.assignment ?? null;
+        const names = guests.map((g) => g.displayName?.trim()).filter(Boolean) as string[];
+        const guestLabel =
+          names.length === 0
+            ? null
+            : names.length === 1
+              ? names[0]
+              : `${names[0]} +${guests.length - 1}`;
         const left = seat.x * scale;
         const width = seat.w * scale;
 
@@ -138,7 +145,11 @@ export function RoomCanvas({
               <span className="px-1 leading-tight">{seat.label}</span>
               {occupied ? (
                 <>
-                  {guests.length > 1 ? (
+                  {guestLabel ? (
+                    <span className="max-w-full truncate px-1 text-[11px] font-semibold leading-tight">
+                      {guestLabel}
+                    </span>
+                  ) : guests.length > 1 ? (
                     <span className="rounded-full bg-white/80 px-1 text-[10px] font-semibold">
                       ×{guests.length}
                     </span>
