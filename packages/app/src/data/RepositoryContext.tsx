@@ -28,6 +28,15 @@ export function RepositoryProvider({ children }: { children: ReactNode }): JSX.E
       if (event.startsWith("product.")) {
         void qc.invalidateQueries({ queryKey: ["products"] });
       }
+      if (event.startsWith("settings.")) {
+        void qc.invalidateQueries({ queryKey: ["settings"] });
+        // open tickets recompute against the new rate / rounding / windows
+        void qc.invalidateQueries({ queryKey: ["tickets"] });
+        void qc.invalidateQueries({ queryKey: ["guests"] });
+      }
+      if (event.startsWith("user.")) {
+        void qc.invalidateQueries({ queryKey: ["users"] });
+      }
     });
   }, [repo, qc]);
 

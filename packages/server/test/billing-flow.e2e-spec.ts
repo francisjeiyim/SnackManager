@@ -310,8 +310,13 @@ describe("SnackManager billing flow (e2e)", () => {
 
   it("filters ticket history by a service-day range", async () => {
     const { seats } = ctx.seed;
-    await seatIn([seats[0].id]);
-    const today = new Date().toISOString().slice(0, 10);
+    const { tickets } = await seatIn([seats[0].id]);
+    // Derive the day from the ticket itself (seatIn uses a fixed arrivalAt, so
+    // the wall clock is not a reliable stand-in for its service day).
+    const one = await auth(
+      request(app.getHttpServer()).get(`/api/tickets/${tickets[0].id}`),
+    ).expect(200);
+    const today = one.body.serviceDay as string;
 
     const inRange = await auth(
       request(app.getHttpServer()).get(`/api/tickets?from=${today}&to=${today}`),

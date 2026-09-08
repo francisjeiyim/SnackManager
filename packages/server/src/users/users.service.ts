@@ -1,12 +1,16 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
-import type { UserCreateInput } from "@snackmanager/shared";
+import { ServiceEvent, type UserCreateInput } from "@snackmanager/shared";
 import { PrismaService } from "../prisma/prisma.service";
+import { EventsGateway } from "../events/events.gateway";
 import { toPublicUser } from "../common/mappers";
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly events: EventsGateway,
+  ) {}
 
   async list() {
     const users = await this.prisma.user.findMany({ orderBy: { createdAt: "asc" } });
@@ -24,12 +28,18 @@ export class UsersService {
         role: input.role,
       },
     });
-    return toPublicUser(user);
+    const pub = toPublicUser(user);
+    this.events.emitEvent(ServiceEvent.USER_UPDATED, pub);
+    return pub;
   }
 
   async setActive(id: string, isActive: boolean) {
     try {
-      return toPublicUser(await this.prisma.user.update({ where: { id }, data: { isActive } }));
+      const pub = toPublicUser(
+        await this.prisma.user.update({ where: { id }, data: { isActive } }),
+      );
+      this.events.emitEvent(ServiceEvent.USER_UPDATED, pub);
+      return pub;
     } catch {
       throw new NotFoundException("user not found");
     }

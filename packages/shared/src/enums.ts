@@ -117,5 +117,7 @@ export const ServiceEvent = {
   PRODUCT_UPDATED: "product.updated",
   ROOM_UPDATED: "room.updated",
   LAYOUT_UPDATED: "layout.updated",
+  SETTINGS_UPDATED: "settings.updated",
+  USER_UPDATED: "user.updated",
 } as const;
 export type ServiceEvent = (typeof ServiceEvent)[keyof typeof ServiceEvent];
