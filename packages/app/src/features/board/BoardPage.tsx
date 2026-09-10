@@ -149,19 +149,14 @@ export function BoardPage(): JSX.Element {
     <div className="flex gap-4">
       <div className="min-w-0 flex-1 space-y-3">
         {immersive ? (
-          <div className="fixed right-3 top-3 z-40 flex items-center gap-2">
-            {rooms.length > 1 ? (
-              <SegmentedControl
-                size="sm"
-                value={room?.id ?? ""}
-                onChange={setActiveRoomId}
-                options={rooms.map((r) => ({ value: r.id, label: r.name }))}
-              />
-            ) : null}
-            <Button size="sm" variant="secondary" onClick={toggleImmersive}>
-              ⤢ {t("board.exitFullscreen")}
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="fixed right-3 top-3 z-40"
+            onClick={toggleImmersive}
+          >
+            ⤢ {t("board.exitFullscreen")}
+          </Button>
         ) : null}
 
         {/* the Floor comes first, right under the menu bar */}
