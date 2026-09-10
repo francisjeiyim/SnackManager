@@ -43,6 +43,7 @@ export function computeGuestCharge(
       timeChargeYen: guest.timeChargeYen,
       sets,
       halfSets,
+      consumedHalfSets: halfSets,
     };
   }
 
@@ -52,6 +53,7 @@ export function computeGuestCharge(
     setPriceYen: guest.setPriceYenSnapshot || settings.setPriceYen,
     halfSetPriceYen: guest.halfSetPriceYenSnapshot || settings.halfSetPriceYen,
     graceMinutes: settings.graceMinutes,
+    validatedHalfSets: guest.validatedHalfSets ?? 0,
   });
 
   return {
@@ -60,5 +62,6 @@ export function computeGuestCharge(
     timeChargeYen: charge.timeChargeYen,
     sets: charge.sets,
     halfSets: charge.halfSets,
+    consumedHalfSets: charge.consumedHalfSets,
   };
 }

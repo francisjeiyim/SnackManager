@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/AuthContext";
 import { useRepository } from "../data/RepositoryContext";
 import { usePermissions } from "../lib/permissions";
+import { useAudioUnlock } from "../lib/useAudioUnlock";
 import { cn } from "../lib/cn";
 
 type IconName =
@@ -49,6 +50,7 @@ export function AppLayout(): JSX.Element {
   const repo = useRepository();
   const { isAdmin } = usePermissions();
   const online = repo.mode === "server";
+  useAudioUnlock();
 
   return (
     <div className="flex min-h-full flex-col">

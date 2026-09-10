@@ -183,8 +183,18 @@ export function useCloseTicket() {
   const repo = useRepository();
   const invalidate = useInvalidateService();
   return useMutation({
-    mutationFn: (vars: { id: string; closedAt?: string }) =>
-      repo.closeTicket(vars.id, vars.closedAt),
+    mutationFn: (vars: { id: string; closedAt?: string; billConsumed?: boolean }) =>
+      repo.closeTicket(vars.id, { closedAt: vars.closedAt, billConsumed: vars.billConsumed }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useValidateHalfSets() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (vars: { guestId: string; count?: number }) =>
+      repo.validateHalfSets(vars.guestId, vars.count),
     onSuccess: invalidate,
   });
 }
@@ -359,6 +369,24 @@ export function useLayoutMutations() {
     }),
     deleteSeat: useMutation({
       mutationFn: (id: string) => repo.deleteSeat(id),
+      onSuccess: invalidate,
+    }),
+  };
+}
+
+/** Shared, temporary floor positions on the board (not the saved layout). */
+export function useArrangeMutations() {
+  const repo = useRepository();
+  const qc = useQueryClient();
+  const invalidate = (): Promise<void> => qc.invalidateQueries({ queryKey: keys.rooms });
+  return {
+    arrange: useMutation({
+      mutationFn: (vars: { roomId: string; seats: Array<{ id: string; x: number; y: number }> }) =>
+        repo.arrangeSeats(vars.roomId, vars.seats),
+      onSuccess: invalidate,
+    }),
+    reset: useMutation({
+      mutationFn: (roomId: string) => repo.resetArrangement(roomId),
       onSuccess: invalidate,
     }),
   };

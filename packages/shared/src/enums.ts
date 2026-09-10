@@ -125,6 +125,8 @@ export const AuditAction = {
   STAFF_PRESENCE: "STAFF_PRESENCE",
   STAFF_ASSIGN: "STAFF_ASSIGN",
   STAFF_UNASSIGN: "STAFF_UNASSIGN",
+  HALFSET_VALIDATE: "HALFSET_VALIDATE",
+  FLOOR_ARRANGE: "FLOOR_ARRANGE",
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 

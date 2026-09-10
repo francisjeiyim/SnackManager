@@ -29,6 +29,7 @@ export const settingsUpdateSchema = z.object({
   setPriceYen: yen.nonnegative().optional(),
   halfSetPriceYen: yen.nonnegative().optional(),
   soundAlertsEnabled: z.boolean().optional(),
+  soundRepeatSeconds: z.number().int().min(0).max(600).optional(),
   defaultLocale: localeSchema.optional(),
   serviceDayCutoverHour: z.number().int().min(0).max(23).optional(),
   hourWarningIntervalMinutes: z.number().int().min(0).max(600).optional(),
@@ -163,8 +164,22 @@ export type SplitInputDto = z.infer<typeof splitSchema>;
 export const closeTicketSchema = z.object({
   ticketId: id,
   closedAt: z.string().datetime().optional(),
+  /** Bill every half-set consumed by the clock (default), or only the validated ones. */
+  billConsumed: z.boolean().optional(),
 });
 export type CloseTicketInput = z.infer<typeof closeTicketSchema>;
+
+export const validateHalfSetsSchema = z.object({
+  /** Target validated count; omit to catch up to what has been consumed. */
+  count: z.number().int().min(0).optional(),
+});
+export type ValidateHalfSetsInput = z.infer<typeof validateHalfSetsSchema>;
+
+export const arrangeSeatsSchema = z.object({
+  roomId: id,
+  seats: z.array(z.object({ id, x: z.number(), y: z.number() })).min(1),
+});
+export type ArrangeSeatsInput = z.infer<typeof arrangeSeatsSchema>;
 
 export const ticketPatchSchema = z.object({
   notes: z.string().max(500).nullable().optional(),

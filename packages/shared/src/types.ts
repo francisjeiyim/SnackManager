@@ -55,6 +55,8 @@ export interface Settings {
    * `0` disables the alert.
    */
   hourWarningMinutes: number;
+  /** Seconds between repeats of the end-of-set alarm (0 = play once). */
+  soundRepeatSeconds: number;
   updatedAt: IsoDateTime;
 }
 
@@ -80,6 +82,9 @@ export interface Seat {
   color: string | null;
   kind: SeatKind;
   isActive: boolean;
+  /** Temporary floor position for the current service; null → use x/y. */
+  tempX: number | null;
+  tempY: number | null;
 }
 
 export interface Party {
@@ -106,6 +111,8 @@ export interface Guest {
   setMinutesSnapshot: number;
   setPriceYenSnapshot: Yen;
   halfSetPriceYenSnapshot: Yen;
+  /** Extension half-sets an operator has validated for billing. */
+  validatedHalfSets: number;
   /** Derived from the seat (not persisted on the guest). */
   seatLabel?: string | null;
   /** Active staff assignment, if any (derived, not persisted on the guest). */
@@ -229,8 +236,10 @@ export interface GuestCharge {
   timeChargeYen: Yen;
   /** 0 before the grace period elapses, 1 afterwards. */
   sets: number;
-  /** Number of extension half-sets past the first full set. */
+  /** Extension half-sets actually billed (validated, capped at consumed). */
   halfSets: number;
+  /** Extension half-sets elapsed by the clock (may exceed `halfSets`). */
+  consumedHalfSets: number;
 }
 
 export interface TicketTotals {
@@ -298,6 +307,8 @@ export interface ClosePlan {
     closedAt: IsoDateTime;
     billedMinutes: number;
     timeChargeYen: Yen;
+    /** Half-sets to persist on the guest as validated at close. */
+    validatedHalfSets: number;
   }>;
   freeSeatIds: string[];
   totals: TicketTotals;

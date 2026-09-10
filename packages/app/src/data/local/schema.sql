@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS "Settings" (
   "setPriceYen" INTEGER NOT NULL DEFAULT 2000,
   "halfSetPriceYen" INTEGER NOT NULL DEFAULT 1000,
   "soundAlertsEnabled" INTEGER NOT NULL DEFAULT 1,
+  "soundRepeatSeconds" INTEGER NOT NULL DEFAULT 30,
   "defaultLocale" TEXT NOT NULL DEFAULT 'ja',
   "serviceDayCutoverHour" INTEGER NOT NULL DEFAULT 5,
   "hourWarningIntervalMinutes" INTEGER NOT NULL DEFAULT 60,
@@ -71,6 +72,8 @@ CREATE TABLE IF NOT EXISTS "Seat" (
   "color" TEXT,
   "kind" TEXT NOT NULL DEFAULT 'PERMANENT',
   "isActive" INTEGER NOT NULL DEFAULT 1,
+  "tempX" REAL,
+  "tempY" REAL,
   UNIQUE ("roomId", "label")
 );
 
@@ -93,6 +96,7 @@ CREATE TABLE IF NOT EXISTS "Guest" (
   "setMinutesSnapshot" INTEGER NOT NULL DEFAULT 90,
   "setPriceYenSnapshot" INTEGER NOT NULL DEFAULT 0,
   "halfSetPriceYenSnapshot" INTEGER NOT NULL DEFAULT 0,
+  "validatedHalfSets" INTEGER NOT NULL DEFAULT 0,
   "billedMinutes" INTEGER,
   "timeChargeYen" INTEGER,
   "ticketId" TEXT REFERENCES "Ticket"("id"),

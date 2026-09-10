@@ -86,6 +86,40 @@ describe("SnackManager billing flow (e2e)", () => {
     expect(closedB.body.guests[0].timeChargeYen).toBe(3000);
   });
 
+  it("only bills an extension half-set once an operator validates it", async () => {
+    const { seats } = ctx.seed;
+    const { tickets } = await seatIn([seats[0].id]);
+    const one = await auth(
+      request(app.getHttpServer()).get(`/api/tickets/${tickets[0].id}`),
+    ).expect(200);
+    const guestId = one.body.guests[0].id as string;
+
+    // backdate the arrival so ~100 min have elapsed
+    await ctx.prisma.guest.update({
+      where: { id: guestId },
+      data: { arrivalAt: new Date(Date.now() - 100 * 60_000) },
+    });
+
+    // running total: first set only, the half-set is consumed but not validated
+    let live = await auth(request(app.getHttpServer()).get("/api/tickets/live")).expect(200);
+    expect(live.body[0].live.timeYen).toBe(2000);
+
+    await auth(
+      request(app.getHttpServer()).post(`/api/guests/${guestId}/validate-halfsets`).send({}),
+    ).expect(201);
+
+    live = await auth(request(app.getHttpServer()).get("/api/tickets/live")).expect(200);
+    expect(live.body[0].live.timeYen).toBe(3000);
+
+    // closing with billConsumed:false keeps it at the validated amount
+    const closed = await auth(
+      request(app.getHttpServer())
+        .post(`/api/tickets/${tickets[0].id}/close`)
+        .send({ billConsumed: false }),
+    ).expect(201);
+    expect(closed.body.timeYen).toBe(3000);
+  });
+
   it("frees the seat once the ticket is closed", async () => {
     const { seats } = ctx.seed;
     const { tickets } = await seatIn([seats[0].id]);

@@ -38,6 +38,7 @@ export function guest(overrides: Partial<Guest> = {}): Guest {
     setMinutesSnapshot: 90,
     setPriceYenSnapshot: 2000,
     halfSetPriceYenSnapshot: 1000,
+    validatedHalfSets: 0,
     billedMinutes: null,
     timeChargeYen: null,
     ticketId: "t_1",

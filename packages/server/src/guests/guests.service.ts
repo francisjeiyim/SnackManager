@@ -111,8 +111,11 @@ export class GuestsService {
       if (!guest) throw new NotFoundException("guest not found");
       if (guest.status !== "SEATED") throw new ConflictException("guest is already closed");
 
+      const base = { ...toGuest(guest), closedAt: null };
+      // seat-out finalises this guest → bill every half-set consumed
+      const consumed = computeGuestCharge(base, settings, now.toISOString()).consumedHalfSets;
       const charge = computeGuestCharge(
-        { ...toGuest(guest), closedAt: null },
+        { ...base, validatedHalfSets: consumed },
         settings,
         now.toISOString(),
       );
@@ -123,6 +126,7 @@ export class GuestsService {
           closedAt: now,
           billedMinutes: charge.billedMinutes,
           timeChargeYen: charge.timeChargeYen,
+          validatedHalfSets: consumed,
         },
       });
       await tx.guestAssignment.updateMany({
@@ -222,6 +226,38 @@ export class GuestsService {
       entityId: guestId,
       userId: byUserId,
     });
+    return this.emitGuest(guestId);
+  }
+
+  /**
+   * Validate the guest's elapsed extension half-sets so they count on the bill.
+   * `count` omitted → catch up to whatever the clock has consumed.
+   */
+  async validateHalfSets(guestId: string, userId?: string, count?: number) {
+    const settings = toBillingSettings(await this.settings.getRaw());
+    const guest = await this.prisma.guest.findUnique({ where: { id: guestId } });
+    if (!guest) throw new NotFoundException("guest not found");
+    if (guest.status !== "SEATED") throw new ConflictException("guest is no longer seated");
+
+    const consumed = computeGuestCharge(
+      { ...toGuest(guest), closedAt: null },
+      settings,
+      new Date().toISOString(),
+    ).consumedHalfSets;
+    const validatedHalfSets = Math.max(0, Math.min(count ?? consumed, consumed));
+
+    await this.prisma.guest.update({ where: { id: guestId }, data: { validatedHalfSets } });
+    await this.audit.record({
+      action: AuditAction.HALFSET_VALIDATE,
+      entityType: "guest",
+      entityId: guestId,
+      userId,
+      data: { validatedHalfSets, consumed },
+    });
+    if (guest.ticketId) {
+      await this.tickets.refreshTotals(guest.ticketId);
+      this.events.emitEvent(ServiceEvent.TICKET_UPDATED, await this.tickets.get(guest.ticketId));
+    }
     return this.emitGuest(guestId);
   }
 

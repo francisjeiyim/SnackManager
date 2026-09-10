@@ -263,6 +263,23 @@ export class SqliteRepository implements SnackRepository {
     return db.all(`SELECT * FROM "Seat" WHERE "roomId"=? ORDER BY "label"`, [roomId]).map(toSeat);
   }
 
+  async arrangeSeats(roomId: string, seats: Array<{ id: string; x: number; y: number }>) {
+    const db = await this.ready;
+    db.tx(() => {
+      for (const s of seats)
+        db.run(`UPDATE "Seat" SET "tempX"=?,"tempY"=? WHERE "id"=?`, [s.x, s.y, s.id]);
+    });
+    this.emit("layout.updated", { roomId });
+    return db.all(`SELECT * FROM "Seat" WHERE "roomId"=? ORDER BY "label"`, [roomId]).map(toSeat);
+  }
+
+  async resetArrangement(roomId: string) {
+    const db = await this.ready;
+    db.run(`UPDATE "Seat" SET "tempX"=NULL,"tempY"=NULL WHERE "roomId"=?`, [roomId]);
+    this.emit("layout.updated", { roomId });
+    return db.all(`SELECT * FROM "Seat" WHERE "roomId"=? ORDER BY "label"`, [roomId]).map(toSeat);
+  }
+
   async deleteSeat(id: string) {
     const db = await this.ready;
     const seat = db.get(`SELECT * FROM "Seat" WHERE "id"=?`, [id]);
@@ -482,10 +499,12 @@ export class SqliteRepository implements SnackRepository {
     const guest = toGuest(row);
     if (guest.status !== "SEATED") throw new BillingError("guest already closed", "GUEST_CLOSED");
     const at = nowIso();
-    const charge = computeGuestCharge({ ...guest, closedAt: null }, settings, at);
+    const base = { ...guest, closedAt: null };
+    const consumed = computeGuestCharge(base, settings, at).consumedHalfSets;
+    const charge = computeGuestCharge({ ...base, validatedHalfSets: consumed }, settings, at);
     db.run(
-      `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"updatedAt"=? WHERE "id"=?`,
-      [at, charge.billedMinutes, charge.timeChargeYen, at, guestId],
+      `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"validatedHalfSets"=?,"updatedAt"=? WHERE "id"=?`,
+      [at, charge.billedMinutes, charge.timeChargeYen, consumed, at, guestId],
     );
     db.run(
       `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='GUEST_LEFT' WHERE "guestId"=? AND "endedAt" IS NULL`,
@@ -494,6 +513,28 @@ export class SqliteRepository implements SnackRepository {
     if (guest.ticketId) this.recompute(db, guest.ticketId, settings);
     const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
     this.emit("guest.closed", updated);
+    if (guest.ticketId) this.emit("ticket.updated", this.present(db, guest.ticketId, settings));
+    return updated;
+  }
+
+  async validateHalfSets(guestId: string, count?: number) {
+    const db = await this.ready;
+    const settings = await this.settings();
+    const row = db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]);
+    if (!row) throw new BillingError("guest not found", "NOT_FOUND");
+    const guest = toGuest(row);
+    if (guest.status !== "SEATED") throw new BillingError("guest not seated", "GUEST_CLOSED");
+    const consumed = computeGuestCharge({ ...guest, closedAt: null }, settings, nowIso())
+      .consumedHalfSets;
+    const validated = Math.max(0, Math.min(count ?? consumed, consumed));
+    db.run(`UPDATE "Guest" SET "validatedHalfSets"=?,"updatedAt"=? WHERE "id"=?`, [
+      validated,
+      nowIso(),
+      guestId,
+    ]);
+    if (guest.ticketId) this.recompute(db, guest.ticketId, settings);
+    const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
+    this.emit("seat.updated", updated);
     if (guest.ticketId) this.emit("ticket.updated", this.present(db, guest.ticketId, settings));
     return updated;
   }
@@ -686,16 +727,18 @@ export class SqliteRepository implements SnackRepository {
     return view;
   }
 
-  async closeTicket(id: string, closedAt?: string) {
+  async closeTicket(id: string, opts: { closedAt?: string; billConsumed?: boolean } = {}) {
     const db = await this.ready;
     const settings = await this.settings();
-    const at = closedAt ?? nowIso();
+    const at = opts.closedAt ?? nowIso();
     db.tx(() => {
-      const plan = planClose(this.bundle(db, id), settings, at);
+      const plan = planClose(this.bundle(db, id), settings, at, {
+        billConsumed: opts.billConsumed ?? true,
+      });
       for (const g of plan.guests) {
         db.run(
-          `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"updatedAt"=? WHERE "id"=?`,
-          [g.closedAt, g.billedMinutes, g.timeChargeYen, nowIso(), g.guestId],
+          `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"validatedHalfSets"=?,"updatedAt"=? WHERE "id"=?`,
+          [g.closedAt, g.billedMinutes, g.timeChargeYen, g.validatedHalfSets, nowIso(), g.guestId],
         );
         db.run(
           `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='GUEST_LEFT' WHERE "guestId"=? AND "endedAt" IS NULL`,

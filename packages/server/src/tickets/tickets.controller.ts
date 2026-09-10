@@ -38,7 +38,10 @@ const splitBody = z.discriminatedUnion("mode", [
   }),
 ]);
 
-const closeBody = z.object({ closedAt: z.string().datetime().optional() });
+const closeBody = z.object({
+  closedAt: z.string().datetime().optional(),
+  billConsumed: z.boolean().optional(),
+});
 
 @Controller("tickets")
 export class TicketsController {
@@ -101,7 +104,7 @@ export class TicketsController {
     @Body(new ZodBody(closeBody)) dto: z.infer<typeof closeBody>,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.tickets.close(id, dto.closedAt, user?.id);
+    return this.tickets.close(id, dto.closedAt, user?.id, dto.billConsumed ?? true);
   }
 
   @Roles(UserRole.CASHIER)

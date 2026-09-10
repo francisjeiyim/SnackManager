@@ -23,6 +23,7 @@ describe("computeGuestCharge (set billing)", () => {
       timeChargeYen: 2000,
       sets: 1,
       halfSets: 0,
+      consumedHalfSets: 0,
     });
   });
 
@@ -36,15 +37,20 @@ describe("computeGuestCharge (set billing)", () => {
     });
   });
 
-  it("adds half-sets past the first set, up to closedAt", () => {
+  it("tracks consumed half-sets but bills only validated ones", () => {
     const g = guest({ arrivalAt: T0, closedAt: at(136) });
+    // nothing validated yet → just the first set
     expect(computeGuestCharge(g, settings(), at(999))).toMatchObject({
       billedMinutes: 136,
-      // 1 set (2000) + 2 half-sets (2 * 1000)
-      timeChargeYen: 4000,
+      timeChargeYen: 2000,
       sets: 1,
-      halfSets: 2,
+      halfSets: 0,
+      consumedHalfSets: 2,
     });
+    // operator validated one extension half-set
+    expect(
+      computeGuestCharge({ ...g, validatedHalfSets: 1 }, settings(), at(999)),
+    ).toMatchObject({ timeChargeYen: 3000, halfSets: 1, consumedHalfSets: 2 });
   });
 
   it("returns stored snapshots verbatim for a CLOSED guest", () => {

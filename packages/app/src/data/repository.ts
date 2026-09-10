@@ -96,6 +96,8 @@ export interface SnackRepository {
   createSeat(input: SeatInput): Promise<Seat>;
   updateSeat(id: string, patch: SeatPatch): Promise<Seat>;
   bulkUpdateSeats(roomId: string, seats: Array<{ id: string } & SeatPatch>): Promise<Seat[]>;
+  arrangeSeats(roomId: string, seats: Array<{ id: string; x: number; y: number }>): Promise<Seat[]>;
+  resetArrangement(roomId: string): Promise<Seat[]>;
   deleteSeat(id: string): Promise<void>;
 
   listProducts(includeInactive?: boolean): Promise<Product[]>;
@@ -108,6 +110,7 @@ export interface SnackRepository {
   seatIn(input: SeatInInput): Promise<SeatInResult>;
   moveGuest(guestId: string, toSeatId: string): Promise<Guest>;
   seatOutGuest(guestId: string): Promise<Guest>;
+  validateHalfSets(guestId: string, count?: number): Promise<Guest>;
   renameGuest(guestId: string, displayName: string | null): Promise<Guest>;
   assignGuest(guestId: string, userId: string): Promise<Guest>;
   unassignGuest(guestId: string): Promise<Guest>;
@@ -123,7 +126,10 @@ export interface SnackRepository {
   addItem(ticketId: string, body: Omit<AddItemInput, "ticketId">): Promise<TicketView>;
   voidItem(ticketId: string, itemId: string): Promise<TicketView>;
   patchTicket(id: string, body: TicketPatchInput): Promise<TicketView>;
-  closeTicket(id: string, closedAt?: string): Promise<TicketView>;
+  closeTicket(
+    id: string,
+    opts?: { closedAt?: string; billConsumed?: boolean },
+  ): Promise<TicketView>;
   mergeTickets(input: MergeInput): Promise<TicketView>;
   splitTicket(id: string, body: SplitBody): Promise<SplitResult>;
   listPayments(ticketId: string): Promise<Payment[]>;

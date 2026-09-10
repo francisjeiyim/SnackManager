@@ -40,6 +40,33 @@ export class SeatsService {
     return updated.map(toSeat);
   }
 
+  /** Temporary, service-time floor positions — does not touch the saved x/y. */
+  async arrange(roomId: string, seats: Array<{ id: string; x: number; y: number }>) {
+    const updated = await this.prisma.$transaction(
+      seats.map((s) =>
+        this.prisma.seat.update({ where: { id: s.id }, data: { tempX: s.x, tempY: s.y } }),
+      ),
+    );
+    this.events.emitEvent(
+      ServiceEvent.LAYOUT_UPDATED,
+      { roomId, seats: updated.map(toSeat) },
+      roomId,
+    );
+    return updated.map(toSeat);
+  }
+
+  /** Drop the temporary positions for a room — back to the saved layout. */
+  async resetArrangement(roomId: string) {
+    await this.prisma.seat.updateMany({ where: { roomId }, data: { tempX: null, tempY: null } });
+    const seats = await this.prisma.seat.findMany({ where: { roomId } });
+    this.events.emitEvent(
+      ServiceEvent.LAYOUT_UPDATED,
+      { roomId, seats: seats.map(toSeat) },
+      roomId,
+    );
+    return seats.map(toSeat);
+  }
+
   async remove(id: string) {
     const seat = await this.prisma.seat.findUnique({ where: { id }, include: { guests: true } });
     if (!seat) throw new NotFoundException("seat not found");

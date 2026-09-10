@@ -40,6 +40,7 @@ export const toSettings = (r: PSettings): Settings => ({
   setPriceYen: r.setPriceYen,
   halfSetPriceYen: r.halfSetPriceYen,
   soundAlertsEnabled: r.soundAlertsEnabled,
+  soundRepeatSeconds: r.soundRepeatSeconds,
   defaultLocale: r.defaultLocale,
   serviceDayCutoverHour: r.serviceDayCutoverHour,
   hourWarningIntervalMinutes: r.hourWarningIntervalMinutes,
@@ -79,6 +80,8 @@ export const toSeat = (r: PSeat): Seat => ({
   color: r.color,
   kind: r.kind,
   isActive: r.isActive,
+  tempX: r.tempX,
+  tempY: r.tempY,
 });
 
 export const toProduct = (r: PProduct): Product => ({
@@ -117,6 +120,7 @@ export const toGuest = (r: PGuestWithSeat): Guest => {
     setMinutesSnapshot: r.setMinutesSnapshot,
     setPriceYenSnapshot: r.setPriceYenSnapshot,
     halfSetPriceYenSnapshot: r.halfSetPriceYenSnapshot,
+    validatedHalfSets: r.validatedHalfSets,
     billedMinutes: r.billedMinutes,
     timeChargeYen: r.timeChargeYen,
     ticketId: r.ticketId,

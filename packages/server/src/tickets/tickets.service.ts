@@ -319,7 +319,7 @@ export class TicketsService {
 
   // --- close ------------------------------------------------------
 
-  async close(id: string, closedAtIso?: string, userId?: string) {
+  async close(id: string, closedAtIso?: string, userId?: string, billConsumed = true) {
     const now = closedAtIso ? new Date(closedAtIso) : new Date();
     const settings = toBillingSettings(await this.settings.getRaw());
 
@@ -327,7 +327,9 @@ export class TicketsService {
       const ticket = await tx.ticket.findUnique({ where: { id }, include: withGraph });
       if (!ticket) throw new NotFoundException("ticket not found");
 
-      const plan = planClose(toBundle(ticket, ticket.guests, ticket.items), settings, now);
+      const plan = planClose(toBundle(ticket, ticket.guests, ticket.items), settings, now, {
+        billConsumed,
+      });
 
       for (const g of plan.guests) {
         await tx.guest.update({
@@ -337,6 +339,7 @@ export class TicketsService {
             closedAt: new Date(g.closedAt),
             billedMinutes: g.billedMinutes,
             timeChargeYen: g.timeChargeYen,
+            validatedHalfSets: g.validatedHalfSets,
           },
         });
       }

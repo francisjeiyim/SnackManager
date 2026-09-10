@@ -14,6 +14,7 @@ export function planClose(
   bundle: TicketBundle,
   settings: BillingSettings,
   now: Instant,
+  opts: { billConsumed?: boolean } = {},
 ): ClosePlan {
   if (bundle.ticket.status !== TicketStatus.OPEN) {
     throw new BillingError(
@@ -22,16 +23,29 @@ export function planClose(
     );
   }
   const closedAt = toDate(now).toISOString();
+  // Default: closing bills every half-set actually consumed, regardless of what
+  // was validated during the service.
+  const billConsumed = opts.billConsumed ?? true;
 
   const guests = bundle.guests
     .filter((g) => g.status === GuestStatus.SEATED)
     .map((g) => {
-      const charge = computeGuestCharge({ ...g, closedAt: null }, settings, closedAt);
+      const consumed = computeGuestCharge({ ...g, closedAt: null }, settings, closedAt)
+        .consumedHalfSets;
+      const validatedHalfSets = billConsumed
+        ? consumed
+        : Math.min(g.validatedHalfSets ?? 0, consumed);
+      const charge = computeGuestCharge(
+        { ...g, closedAt: null, validatedHalfSets },
+        settings,
+        closedAt,
+      );
       return {
         guestId: g.id,
         closedAt,
         billedMinutes: charge.billedMinutes,
         timeChargeYen: charge.timeChargeYen,
+        validatedHalfSets,
       };
     });
 
@@ -48,6 +62,7 @@ export function planClose(
             closedAt: snap.closedAt,
             billedMinutes: snap.billedMinutes,
             timeChargeYen: snap.timeChargeYen,
+            validatedHalfSets: snap.validatedHalfSets,
           }
         : g;
     }),

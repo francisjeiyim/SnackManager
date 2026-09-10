@@ -82,6 +82,7 @@ model Settings {
   setPriceYen               Int          @default(2000)
   halfSetPriceYen           Int          @default(1000)
   soundAlertsEnabled        Boolean      @default(true)
+  soundRepeatSeconds        Int          @default(30)
   defaultLocale           Locale       @default(ja)
   serviceDayCutoverHour     Int          @default(5)
   hourWarningIntervalMinutes Int         @default(60)
@@ -147,6 +148,8 @@ model Seat {
   color       String?
   kind        SeatKind  @default(PERMANENT)
   isActive    Boolean   @default(true)
+  tempX       Float?
+  tempY       Float?
   guests      Guest[]
 
   @@unique([roomId, label])
@@ -176,6 +179,7 @@ model Guest {
   setMinutesSnapshot       Int         @default(90)
   setPriceYenSnapshot      Int         @default(0)
   halfSetPriceYenSnapshot  Int         @default(0)
+  validatedHalfSets        Int         @default(0)
   billedMinutes            Int?
   timeChargeYen            Int?
   ticketId                 String?

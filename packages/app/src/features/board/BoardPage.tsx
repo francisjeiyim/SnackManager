@@ -9,8 +9,15 @@ import { storedLocale } from "../../i18n";
 import { useNow } from "../../lib/useNow";
 import { useElementWidth } from "../../lib/useElementWidth";
 import { usePermissions } from "../../lib/permissions";
+import { audioReady, playChime, unlockAudio } from "../../lib/chime";
 import { useRepository } from "../../data/RepositoryContext";
-import { useActiveGuests, useLiveTickets, useRooms, useSettings } from "../../data/queries";
+import {
+  useActiveGuests,
+  useArrangeMutations,
+  useLiveTickets,
+  useRooms,
+  useSettings,
+} from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
 import { SeatInDialog } from "./SeatInDialog";
 import { useSetAlerts } from "./useSetAlerts";
@@ -31,6 +38,10 @@ export function BoardPage(): JSX.Element {
   const [seatInSeatId, setSeatInSeatId] = useState<string | null | undefined>(undefined);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [canvasRef, canvasWidth] = useElementWidth<HTMLDivElement>();
+  const [arrangeMode, setArrangeMode] = useState(false);
+  const [arrangeDraft, setArrangeDraft] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [, bumpSound] = useState(0); // re-render to re-check audioReady()
+  const arrange = useArrangeMutations();
 
   const rooms = useMemo(() => roomsQ.data ?? [], [roomsQ.data]);
 
@@ -59,7 +70,9 @@ export function BoardPage(): JSX.Element {
 
   useSetAlerts(guestsBySeat, useNow(2000), {
     setMinutes: settingsQ.data?.setMinutes ?? 90,
+    graceMinutes: settingsQ.data?.graceMinutes ?? 0,
     leadMinutes: settingsQ.data?.hourWarningMinutes ?? 0,
+    repeatSeconds: settingsQ.data?.soundRepeatSeconds ?? 0,
     enabled: settingsQ.data?.soundAlertsEnabled ?? true,
   });
 
@@ -116,11 +129,89 @@ export function BoardPage(): JSX.Element {
           ) : (
             <span className="text-sm font-semibold text-stone-700">{room?.name}</span>
           )}
-          {canServe ? (
-            <Button size="sm" className="ml-auto" onClick={() => setSeatInSeatId(null)}>
-              + {t("board.seatIn")}
+
+          {(settingsQ.data?.soundAlertsEnabled ?? true) && !audioReady() ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                void unlockAudio().then(() => {
+                  playChime("hard");
+                  bumpSound((n) => n + 1);
+                });
+              }}
+            >
+              🔔 {t("board.enableSound")}
             </Button>
           ) : null}
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {arrangeMode ? (
+              <>
+                <span className="text-xs text-stone-400">{t("board.arrangeHint")}</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    if (window.confirm(t("board.resetArrangementConfirm")) && room)
+                      arrange.reset.mutate(room.id, {
+                        onSuccess: () => {
+                          setArrangeDraft(new Map());
+                          setArrangeMode(false);
+                        },
+                      });
+                  }}
+                >
+                  {t("board.resetArrangement")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="success"
+                  disabled={arrangeDraft.size === 0 || arrange.arrange.isPending}
+                  onClick={() => {
+                    if (!room) return;
+                    arrange.arrange.mutate(
+                      {
+                        roomId: room.id,
+                        seats: [...arrangeDraft.entries()].map(([id, p]) => ({ id, ...p })),
+                      },
+                      {
+                        onSuccess: () => {
+                          setArrangeDraft(new Map());
+                          setArrangeMode(false);
+                        },
+                      },
+                    );
+                  }}
+                >
+                  {t("board.saveArrangement")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setArrangeDraft(new Map());
+                    setArrangeMode(false);
+                  }}
+                >
+                  {t("board.exitArrange")}
+                </Button>
+              </>
+            ) : (
+              <>
+                {canServe ? (
+                  <Button size="sm" variant="ghost" onClick={() => setArrangeMode(true)}>
+                    {t("board.rearrange")}
+                  </Button>
+                ) : null}
+                {canServe ? (
+                  <Button size="sm" onClick={() => setSeatInSeatId(null)}>
+                    + {t("board.seatIn")}
+                  </Button>
+                ) : null}
+              </>
+            )}
+          </div>
         </div>
 
         {/* legend */}
@@ -148,7 +239,13 @@ export function BoardPage(): JSX.Element {
               guestsBySeat={guestsBySeat}
               containerWidth={canvasWidth}
               setMinutes={settingsQ.data?.setMinutes ?? 90}
+              graceMinutes={settingsQ.data?.graceMinutes ?? 0}
               leadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
+              arrangeMode={arrangeMode}
+              arrangeDraft={arrangeDraft}
+              onSeatMove={(seatId, x, y) =>
+                setArrangeDraft((m) => new Map(m).set(seatId, { x, y }))
+              }
               onSeatClick={(seatId, tId) => {
                 if (tId) setTicketId(tId);
                 else if (canServe) setSeatInSeatId(seatId);

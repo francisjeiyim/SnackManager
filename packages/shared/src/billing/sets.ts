@@ -11,13 +11,17 @@ export interface SetPricing {
   halfSetPriceYen: Yen;
   /** Below this many minutes of stay, nothing is charged. */
   graceMinutes: number;
+  /** Extension half-sets an operator has validated (default 0). */
+  validatedHalfSets?: number;
 }
 
 export interface SetCharge {
   /** 0 while within the grace window, 1 once the first set applies. */
   sets: number;
-  /** Extension half-sets past the first full set. */
+  /** Extension half-sets actually billed (validated, capped at consumed). */
   halfSets: number;
+  /** Extension half-sets elapsed by the clock. */
+  consumedHalfSets: number;
   /** Whole elapsed minutes, for display. */
   billedMinutes: number;
   timeChargeYen: Yen;
@@ -27,11 +31,10 @@ export interface SetCharge {
  * Time charge for one stay, billed in sets and half-sets:
  *
  * - `elapsed <= graceMinutes` → nothing.
- * - Otherwise the **first set is always charged whole** (`setPriceYen`), even a
- *   two-minute stay past the grace window.
- * - Every started block of `setMinutes / 2` beyond the first set adds one
- *   half-set (`halfSetPriceYen`). So with a 90-min set: ≤90 → 1 set,
- *   90–135 → 1 set + 1 half, 135–180 → 1 set + 2 halves, …
+ * - Otherwise the **first set is always charged whole** (`setPriceYen`).
+ * - Every started block of `setMinutes / 2` beyond the first set is *consumed*;
+ *   but only the half-sets an operator has **validated** are billed
+ *   (`validatedHalfSets`, capped at what has actually been consumed).
  */
 export function computeSetCharge(
   arrivalAt: Instant,
@@ -44,18 +47,23 @@ export function computeSetCharge(
   const elapsed = elapsedMinutesExact(arrivalAt, endAt);
   const grace = Math.max(0, pricing.graceMinutes);
   if (elapsed <= grace) {
-    return { sets: 0, halfSets: 0, billedMinutes: 0, timeChargeYen: 0 };
+    return { sets: 0, halfSets: 0, consumedHalfSets: 0, billedMinutes: 0, timeChargeYen: 0 };
   }
 
   const setMinutes = Math.max(1, pricing.setMinutes);
   const half = setMinutes / 2;
-  const halfSets =
+  const consumedHalfSets =
     elapsed <= setMinutes ? 0 : Math.ceil((elapsed - setMinutes) / half);
+  const billedHalfSets = Math.max(
+    0,
+    Math.min(pricing.validatedHalfSets ?? 0, consumedHalfSets),
+  );
 
   return {
     sets: 1,
-    halfSets,
+    halfSets: billedHalfSets,
+    consumedHalfSets,
     billedMinutes: Math.ceil(elapsed),
-    timeChargeYen: pricing.setPriceYen + halfSets * pricing.halfSetPriceYen,
+    timeChargeYen: pricing.setPriceYen + billedHalfSets * pricing.halfSetPriceYen,
   };
 }

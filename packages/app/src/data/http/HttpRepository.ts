@@ -77,6 +77,15 @@ export class HttpRepository implements SnackRepository {
   bulkUpdateSeats(roomId: string, seats: Array<{ id: string } & SeatPatch>): Promise<Seat[]> {
     return this.api.request("PATCH", "/seats/bulk", { roomId, seats });
   }
+  arrangeSeats(
+    roomId: string,
+    seats: Array<{ id: string; x: number; y: number }>,
+  ): Promise<Seat[]> {
+    return this.api.request("PATCH", "/seats/arrange", { roomId, seats });
+  }
+  resetArrangement(roomId: string): Promise<Seat[]> {
+    return this.api.request("POST", "/seats/arrange/reset", { roomId });
+  }
   async deleteSeat(id: string): Promise<void> {
     await this.api.request("DELETE", `/seats/${id}`);
   }
@@ -109,6 +118,9 @@ export class HttpRepository implements SnackRepository {
   seatOutGuest(guestId: string): Promise<Guest> {
     return this.api.request("POST", `/guests/${guestId}/seat-out`);
   }
+  validateHalfSets(guestId: string, count?: number): Promise<Guest> {
+    return this.api.request("POST", `/guests/${guestId}/validate-halfsets`, { count });
+  }
   renameGuest(guestId: string, displayName: string | null): Promise<Guest> {
     return this.api.request("PATCH", `/guests/${guestId}`, { displayName });
   }
@@ -139,8 +151,11 @@ export class HttpRepository implements SnackRepository {
   patchTicket(id: string, body: TicketPatchInput): Promise<TicketView> {
     return this.api.request("PATCH", `/tickets/${id}`, body);
   }
-  closeTicket(id: string, closedAt?: string): Promise<TicketView> {
-    return this.api.request("POST", `/tickets/${id}/close`, { closedAt });
+  closeTicket(
+    id: string,
+    opts: { closedAt?: string; billConsumed?: boolean } = {},
+  ): Promise<TicketView> {
+    return this.api.request("POST", `/tickets/${id}/close`, opts);
   }
   mergeTickets(input: MergeInput): Promise<TicketView> {
     return this.api.request("POST", "/tickets/merge", input);

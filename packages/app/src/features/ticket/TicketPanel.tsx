@@ -6,7 +6,7 @@ import {
   elapsedMs,
   type BillingSettings,
 } from "@snackmanager/shared";
-import { Badge, Button, Card, IconButton, SectionTitle, Skeleton } from "../../components/ui";
+import { Badge, Button, Card, IconButton, Modal, SectionTitle, Skeleton } from "../../components/ui";
 import { EditableText } from "../../components/EditableText";
 import { duration, setLabel, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
@@ -23,6 +23,7 @@ import {
   useSettings,
   useTicket,
   useUnassignGuest,
+  useValidateHalfSets,
   useVoidItem,
 } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
@@ -53,9 +54,11 @@ export function TicketPanel({
   const rename = useRenameGuest();
   const assign = useAssignGuest();
   const unassign = useUnassignGuest();
+  const validateHalfSets = useValidateHalfSets();
   const presentStaff = useAssignableStaff().data ?? [];
 
   const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split">(null);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [moveGuest, setMoveGuest] = useState<TicketView["guests"][number] | null>(null);
 
   if (ticketQ.isLoading || settingsQ.isLoading) {
@@ -80,6 +83,21 @@ export function TicketPanel({
     ? computeTicketTotals({ ticket, guests: ticket.guests, items: ticket.items }, settings, now)
     : ticket.live;
   const balance = ticket.totalYen - ticket.paidYen;
+
+  const pendingHalfSets = ticket.guests
+    .filter((g) => g.status === "SEATED")
+    .reduce((a, g) => {
+      const c = computeGuestCharge(g, settings, now);
+      return a + Math.max(0, c.consumedHalfSets - c.halfSets);
+    }, 0);
+
+  const doClose = (billConsumed: boolean): void => {
+    setConfirmClose(false);
+    closeTicket.mutate(
+      { id: ticket.id, billConsumed },
+      { onSuccess: () => toastBus.success(t("ticket.closed")) },
+    );
+  };
   const oldest = ticket.guests.reduce(
     (min, g) => Math.min(min, Date.parse(g.arrivalAt)),
     Number.POSITIVE_INFINITY,
@@ -137,7 +155,7 @@ export function TicketPanel({
                         </span>
                       ) : null}
                     </div>
-                    <div className="flex items-center gap-2 text-xs tabular-nums text-stone-400">
+                    <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums text-stone-400">
                       <span>{duration(ms)}</span>
                       {charge.sets > 0 ? (
                         <span className="rounded bg-stone-100 px-1 font-medium text-stone-500">
@@ -147,6 +165,20 @@ export function TicketPanel({
                       <span className="font-medium text-stone-600">
                         {yen(charge.timeChargeYen, locale)}
                       </span>
+                      {isOpen && seated && charge.consumedHalfSets > charge.halfSets ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-rose-100 px-1 font-semibold text-rose-700">
+                          +{charge.consumedHalfSets - charge.halfSets} {t("ticket.pendingHalfSet")}
+                          {perms.canServe ? (
+                            <button
+                              className="rounded bg-rose-600 px-1 text-[10px] text-white hover:bg-rose-700"
+                              disabled={validateHalfSets.isPending}
+                              onClick={() => validateHalfSets.mutate({ guestId: g.id })}
+                            >
+                              {t("ticket.validateHalfSet")}
+                            </button>
+                          ) : null}
+                        </span>
+                      ) : null}
                     </div>
                     {isOpen && seated && perms.canServe ? (
                       <div className="mt-1 flex items-center gap-1">
@@ -300,12 +332,7 @@ export function TicketPanel({
                   size="sm"
                   className="min-w-[88px] flex-1"
                   loading={closeTicket.isPending}
-                  onClick={() =>
-                    closeTicket.mutate(
-                      { id: ticket.id },
-                      { onSuccess: () => toastBus.success(t("ticket.closed")) },
-                    )
-                  }
+                  onClick={() => (pendingHalfSets > 0 ? setConfirmClose(true) : doClose(true))}
                 >
                   {t("ticket.close")}
                 </Button>
@@ -368,6 +395,28 @@ export function TicketPanel({
         <SplitModal ticket={ticket} onClose={() => setModal(null)} onDone={() => setModal(null)} />
       ) : null}
       {moveGuest ? <MoveGuestModal guest={moveGuest} onClose={() => setMoveGuest(null)} /> : null}
+
+      {confirmClose ? (
+        <Modal
+          open
+          title={t("ticket.closeTitle")}
+          onClose={() => setConfirmClose(false)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => doClose(false)}>
+                {t("ticket.closeValidatedOnly")}
+              </Button>
+              <Button variant="success" onClick={() => doClose(true)}>
+                {t("ticket.closeBillAll")}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-stone-600">
+            {t("ticket.closePending", { n: pendingHalfSets })}
+          </p>
+        </Modal>
+      ) : null}
     </Card>
   );
 }

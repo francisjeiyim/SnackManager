@@ -24,6 +24,7 @@ export function SettingsPage(): JSX.Element {
     graceMinutes: 5,
     hourWarningMinutes: 10,
     soundAlertsEnabled: true,
+    soundRepeatSeconds: 30,
   });
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -36,6 +37,7 @@ export function SettingsPage(): JSX.Element {
         graceMinutes: settingsQ.data.graceMinutes,
         hourWarningMinutes: settingsQ.data.hourWarningMinutes,
         soundAlertsEnabled: settingsQ.data.soundAlertsEnabled,
+        soundRepeatSeconds: settingsQ.data.soundRepeatSeconds,
       });
     }
   }, [settingsQ.data]);
@@ -167,6 +169,21 @@ export function SettingsPage(): JSX.Element {
                     setForm({
                       ...form,
                       hourWarningMinutes: Math.min(120, Math.max(0, Number(e.target.value) || 0)),
+                    })
+                  }
+                />
+              </Field>
+              <Field label={t("settings.soundRepeat")} hint={t("settings.soundRepeatHint")}>
+                <Input
+                  type="number"
+                  min={0}
+                  max={600}
+                  disabled={!isAdmin}
+                  value={form.soundRepeatSeconds}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      soundRepeatSeconds: Math.min(600, Math.max(0, Number(e.target.value) || 0)),
                     })
                   }
                 />
