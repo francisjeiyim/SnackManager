@@ -164,7 +164,32 @@ export function BoardPage(): JSX.Element {
           </div>
         ) : null}
 
-        {/* summary bar */}
+        {/* the Floor comes first, right under the menu bar */}
+        {room ? (
+          <div ref={canvasRef} className="overflow-x-auto pb-2">
+            <RoomCanvas
+              room={room}
+              guestsBySeat={guestsBySeat}
+              containerWidth={canvasWidth}
+              setMinutes={settingsQ.data?.setMinutes ?? 90}
+              graceMinutes={settingsQ.data?.graceMinutes ?? 0}
+              leadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
+              unpaidBySeat={unpaidBySeat}
+              arrangeMode={arrangeMode}
+              arrangeDraft={arrangeDraft}
+              onSeatMove={(seatId, x, y) =>
+                setArrangeDraft((m) => new Map(m).set(seatId, { x, y }))
+              }
+              onSeatClick={(seatId, tId) => {
+                if (guestsBySeat.has(seatId) || unpaidBySeat.has(seatId)) setQuickSeatId(seatId);
+                else if (tId) setTicketId(tId);
+                else if (canServe) setSeatInSeatId(seatId);
+              }}
+            />
+          </div>
+        ) : null}
+
+        {/* summary bar — now below the Floor */}
         {!immersive ? (
           <Card className="flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-3.5 text-sm">
             <Stat label={t("board.seatsInUse")} value={String(summary.seatsInUse)} />
@@ -295,30 +320,6 @@ export function BoardPage(): JSX.Element {
             {t("staff.title")}
           </span>
         </div>
-
-        {room ? (
-          <div ref={canvasRef} className="overflow-x-auto pb-2">
-            <RoomCanvas
-              room={room}
-              guestsBySeat={guestsBySeat}
-              containerWidth={canvasWidth}
-              setMinutes={settingsQ.data?.setMinutes ?? 90}
-              graceMinutes={settingsQ.data?.graceMinutes ?? 0}
-              leadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
-              unpaidBySeat={unpaidBySeat}
-              arrangeMode={arrangeMode}
-              arrangeDraft={arrangeDraft}
-              onSeatMove={(seatId, x, y) =>
-                setArrangeDraft((m) => new Map(m).set(seatId, { x, y }))
-              }
-              onSeatClick={(seatId, tId) => {
-                if (guestsBySeat.has(seatId) || unpaidBySeat.has(seatId)) setQuickSeatId(seatId);
-                else if (tId) setTicketId(tId);
-                else if (canServe) setSeatInSeatId(seatId);
-              }}
-            />
-          </div>
-        ) : null}
       </div>
 
       {ticketId ? (

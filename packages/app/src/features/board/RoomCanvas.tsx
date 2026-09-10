@@ -259,8 +259,10 @@ export function RoomCanvas({
               ) : null}
               <span
                 className={cn(
-                  "px-1 leading-tight",
-                  state === "free" && "text-lg font-extrabold text-stone-700",
+                  "px-1 font-black leading-none",
+                  state === "free"
+                    ? "text-3xl text-stone-800 sm:text-4xl"
+                    : "text-xl sm:text-2xl",
                 )}
               >
                 {seat.label}
@@ -272,16 +274,16 @@ export function RoomCanvas({
                       ×{guests.length}
                     </span>
                   ) : null}
-                  <span className="text-xs font-bold tabular-nums">
+                  <span className="text-sm font-bold tabular-nums">
                     {duration(elapsedMs(new Date(earliest), now))}
                   </span>
                 </>
               ) : unpaidHere ? (
-                <span className="text-[10px] font-bold tabular-nums">
+                <span className="text-[11px] font-bold tabular-nums">
                   {t("board.unpaidSeat")}
                 </span>
               ) : (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
                   {t("board.free")}
                 </span>
               )}
