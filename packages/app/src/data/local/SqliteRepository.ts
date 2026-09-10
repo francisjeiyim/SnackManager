@@ -1178,6 +1178,35 @@ export class SqliteRepository implements SnackRepository {
     }
   }
 
+  async resetOperationalData(_password: string) {
+    const db = await this.ready;
+    const count = (sql: string): number =>
+      db.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${sql}`)?.n ?? 0;
+    const cleared = {
+      payments: count(`"Payment"`),
+      items: count(`"TicketItem"`),
+      guests: count(`"Guest"`),
+      tickets: count(`"Ticket"`),
+      parties: count(`"Party"`),
+      audits: count(`"AuditLog"`),
+    };
+    db.tx(() => {
+      db.run(`DELETE FROM "Payment"`);
+      db.run(`DELETE FROM "TicketItem"`);
+      db.run(`DELETE FROM "GuestExtension"`);
+      db.run(`DELETE FROM "GuestAssignment"`);
+      db.run(`DELETE FROM "Guest"`);
+      db.run(`DELETE FROM "Ticket"`);
+      db.run(`DELETE FROM "TicketCounter"`);
+      db.run(`DELETE FROM "Party"`);
+      db.run(`DELETE FROM "AuditLog"`);
+      db.run(`UPDATE "Seat" SET "tempX"=NULL,"tempY"=NULL`);
+    });
+    this.emit("settings.updated", { reset: true });
+    this.emit("layout.updated", { reset: true });
+    return { ok: true, cleared };
+  }
+
   // --- helpers ---------------------------------------------
 
   /** Write the given columns; booleans are coerced to 0/1. */

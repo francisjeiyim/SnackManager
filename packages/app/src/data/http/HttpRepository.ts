@@ -201,6 +201,11 @@ export class HttpRepository implements SnackRepository {
   async deleteUser(id: string): Promise<void> {
     await this.api.request("DELETE", `/users/${id}`);
   }
+  resetOperationalData(
+    password: string,
+  ): Promise<{ ok: boolean; cleared: Record<string, number> }> {
+    return this.api.request("POST", "/admin/reset", { password });
+  }
 
   subscribe(listener: ServiceListener): () => void {
     return this.socket.subscribe(listener);

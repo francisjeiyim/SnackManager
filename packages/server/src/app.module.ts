@@ -15,6 +15,7 @@ import { RoomsModule } from "./rooms/rooms.module";
 import { ProductsModule } from "./products/products.module";
 import { TicketsModule } from "./tickets/tickets.module";
 import { GuestsModule } from "./guests/guests.module";
+import { AdminModule } from "./admin/admin.module";
 import { HealthController } from "./health.controller";
 
 @Module({
@@ -35,6 +36,7 @@ import { HealthController } from "./health.controller";
     ProductsModule,
     TicketsModule,
     GuestsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

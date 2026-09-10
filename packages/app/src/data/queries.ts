@@ -300,6 +300,15 @@ export function useSaveSettings() {
   });
 }
 
+export function useResetOperationalData() {
+  const repo = useRepository();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { password: string }) => repo.resetOperationalData(vars.password),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
 export function useProductMutations() {
   const repo = useRepository();
   const qc = useQueryClient();

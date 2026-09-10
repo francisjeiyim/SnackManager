@@ -264,7 +264,14 @@
     "manageStaff": "スタッフ管理",
     "addStaff": "スタッフを追加",
     "role": "役割",
-    "roles": { "ADMIN": "管理者", "CASHIER": "レジ", "SERVER": "ホール" }
+    "roles": { "ADMIN": "管理者", "CASHIER": "レジ", "SERVER": "ホール" },
+    "dataReset": "データベースを初期化",
+    "dataResetWarn": "すべての伝票・客・支払い・延長・担当割当・監査ログ・伝票番号カウンターを削除します。部屋・座席・商品・設定・ユーザーは残ります。取り消せません。",
+    "dataResetPassword": "管理者パスワード",
+    "dataResetButton": "初期化する",
+    "dataResetConfirm": "すべての伝票・客・支払いを完全に削除しますか？ 部屋・商品・設定・ユーザーは残ります。取り消せません。",
+    "dataResetDone": "データベースを初期化しました",
+    "dataResetWrongPassword": "パスワードが違います"
   },
   "staff": {
     "title": "スタッフ",

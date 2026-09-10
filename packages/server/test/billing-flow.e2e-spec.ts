@@ -460,4 +460,59 @@ describe("SnackManager billing flow (e2e)", () => {
       .send({})
       .expect(403);
   });
+
+  it("admin can reset operational data with their password, keeping the setup", async () => {
+    const { seats, products } = ctx.seed;
+    const { tickets } = await seatIn([seats[0].id, seats[1].id]);
+    await addItem(tickets[0].id, products.beer.id, 2);
+    await close(tickets[0].id, at(30));
+
+    // wrong password → 403, nothing deleted
+    await auth(
+      request(app.getHttpServer()).post("/api/admin/reset").send({ password: "nope" }),
+    ).expect(403);
+    expect(
+      (await auth(request(app.getHttpServer()).get("/api/tickets")).expect(200)).body.length,
+    ).toBeGreaterThan(0);
+
+    // a SERVER may not reset even with a password
+    await ctx.prisma.user.create({
+      data: {
+        username: "srv2",
+        role: "SERVER",
+        passwordHash: await (await import("bcrypt")).hash("srv12345", 8),
+      },
+    });
+    const srvToken = await login(app, "srv2", "srv12345");
+    await request(app.getHttpServer())
+      .post("/api/admin/reset")
+      .set("authorization", `Bearer ${srvToken}`)
+      .send({ password: "srv12345" })
+      .expect(403);
+
+    // correct admin password → wipes tickets/guests, keeps rooms/products/settings/users
+    const done = await auth(
+      request(app.getHttpServer()).post("/api/admin/reset").send({ password: "admin1234" }),
+    ).expect(201);
+    expect(done.body.ok).toBe(true);
+
+    expect((await auth(request(app.getHttpServer()).get("/api/tickets")).expect(200)).body).toEqual(
+      [],
+    );
+    expect(
+      (await auth(request(app.getHttpServer()).get("/api/guests/active")).expect(200)).body,
+    ).toEqual([]);
+    // setup survives
+    expect(
+      (await auth(request(app.getHttpServer()).get("/api/rooms")).expect(200)).body.length,
+    ).toBeGreaterThan(0);
+    expect(
+      (await auth(request(app.getHttpServer()).get("/api/products")).expect(200)).body.length,
+    ).toBeGreaterThan(0);
+    expect(await ctx.prisma.settings.findUnique({ where: { id: "settings" } })).not.toBeNull();
+    expect(await ctx.prisma.user.count()).toBeGreaterThan(0);
+
+    // seats reusable straight away
+    await seatIn([seats[0].id]);
+  });
 });

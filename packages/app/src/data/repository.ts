@@ -151,6 +151,13 @@ export interface SnackRepository {
   resetUserPassword(id: string, password: string): Promise<void>;
   deleteUser(id: string): Promise<void>;
 
+  /**
+   * Admin-only. Wipe operational data (tickets, guests, payments, parties,
+   * audit log, counters) while keeping rooms, seats, products, settings and
+   * users. `password` is the caller's own admin password, re-checked server-side.
+   */
+  resetOperationalData(password: string): Promise<{ ok: boolean; cleared: Record<string, number> }>;
+
   /** Real-time change feed. Returns an unsubscribe function. */
   subscribe(listener: ServiceListener): () => void;
 

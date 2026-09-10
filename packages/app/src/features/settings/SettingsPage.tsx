@@ -6,7 +6,8 @@ import { loadLocalConfig, saveLocalConfig, type DeployMode } from "../../lib/con
 import { playChime, unlockAudio } from "../../lib/chime";
 import { setLocale, storedLocale } from "../../i18n";
 import { useAuth } from "../../auth/AuthContext";
-import { useSaveSettings, useSettings } from "../../data/queries";
+import { toastBus } from "../../lib/toastBus";
+import { useResetOperationalData, useSaveSettings, useSettings } from "../../data/queries";
 import { getLocalDb, importLocalDb, resetLocalDb } from "../../data/local/db";
 
 export function SettingsPage(): JSX.Element {
@@ -238,7 +239,62 @@ export function SettingsPage(): JSX.Element {
           </Link>
         </Card>
       ) : null}
+
+      {isAdmin && local.mode === "server" ? <DataResetCard /> : null}
     </div>
+  );
+}
+
+function DataResetCard(): JSX.Element {
+  const { t } = useTranslation();
+  const reset = useResetOperationalData();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const run = (): void => {
+    setError(null);
+    if (!window.confirm(t("settings.dataResetConfirm"))) return;
+    reset.mutate(
+      { password },
+      {
+        onSuccess: () => {
+          toastBus.success(t("settings.dataResetDone"));
+          setPassword("");
+          setTimeout(() => window.location.reload(), 600);
+        },
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(/401|password/i.test(msg) ? t("settings.dataResetWrongPassword") : msg);
+        },
+      },
+    );
+  };
+
+  return (
+    <Card className="space-y-3 border-rose-200 bg-rose-50/40 p-4">
+      <h2 className="text-sm font-bold text-rose-700">{t("settings.dataReset")}</h2>
+      <p className="text-xs text-stone-600">{t("settings.dataResetWarn")}</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label={t("settings.dataResetPassword")}>
+          <Input
+            type="password"
+            autoComplete="off"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="sm:w-64"
+          />
+        </Field>
+        <Button
+          variant="danger"
+          disabled={!password || reset.isPending}
+          loading={reset.isPending}
+          onClick={run}
+        >
+          {t("settings.dataResetButton")}
+        </Button>
+      </div>
+      {error ? <p className="text-sm font-medium text-rose-700">{error}</p> : null}
+    </Card>
   );
 }
 

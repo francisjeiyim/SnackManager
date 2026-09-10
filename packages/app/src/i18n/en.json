@@ -264,7 +264,14 @@
     "manageStaff": "Manage staff",
     "addStaff": "Add staff",
     "role": "Role",
-    "roles": { "ADMIN": "Admin", "CASHIER": "Cashier", "SERVER": "Server" }
+    "roles": { "ADMIN": "Admin", "CASHIER": "Cashier", "SERVER": "Server" },
+    "dataReset": "Reset database",
+    "dataResetWarn": "Deletes every ticket, guest, payment, extension, staff assignment, audit entry and ticket counter. Keeps rooms, seats, products, settings and user accounts. Cannot be undone.",
+    "dataResetPassword": "Your admin password",
+    "dataResetButton": "Reset database",
+    "dataResetConfirm": "Permanently delete all tickets, guests and payments? Rooms, products, settings and users are kept. This cannot be undone.",
+    "dataResetDone": "Database reset",
+    "dataResetWrongPassword": "Wrong password"
   },
   "staff": {
     "title": "Staff",
