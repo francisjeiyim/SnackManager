@@ -28,9 +28,10 @@ export function LoginPage(): JSX.Element {
 
   return (
     <div className="relative flex min-h-full items-center justify-center overflow-hidden p-4">
-      {/* soft decorative glow */}
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-accent-200/40 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-emerald-200/40 blur-3xl" />
+      {/* playful decorative glow */}
+      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-accent-300/35 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-sky-300/30 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-emerald-300/25 blur-3xl" />
 
       <div className="relative w-full max-w-sm rounded-3xl border border-stone-200/70 bg-white/90 p-7 shadow-panel backdrop-blur-sm">
         <div className="mb-6 flex flex-col items-center text-center">

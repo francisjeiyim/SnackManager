@@ -19,16 +19,17 @@ html {
 
 body {
   margin: 0;
-  color: #453e33;
+  color: #3e3d37;
   letter-spacing: -0.006em;
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN",
     "Noto Sans JP", Meiryo, sans-serif;
-  /* Warm sand ground with a soft light from the top. */
-  background-color: #faf6f0;
+  /* Crisp near-white ground with a playful multi-tone light from the top. */
+  background-color: #f7f7f3;
   background-image:
-    radial-gradient(1200px 480px at 50% -10%, rgb(225 102 59 / 0.06), transparent 70%),
-    radial-gradient(900px 420px at 100% 0%, rgb(107 143 113 / 0.05), transparent 65%);
+    radial-gradient(900px 420px at 12% -8%, rgb(255 107 44 / 0.1), transparent 60%),
+    radial-gradient(900px 420px at 88% -8%, rgb(46 144 250 / 0.09), transparent 60%),
+    radial-gradient(1000px 460px at 50% 0%, rgb(18 183 106 / 0.06), transparent 65%);
   background-attachment: fixed;
 }
 
@@ -45,7 +46,7 @@ input,
 select,
 textarea,
 button {
-  accent-color: #e1663b;
+  accent-color: #ff6b2c;
 }
 
 @media (prefers-reduced-motion: reduce) {
