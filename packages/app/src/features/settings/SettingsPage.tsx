@@ -3,7 +3,14 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button, Card, Field, Input, Select, Spinner } from "../../components/ui";
 import { loadLocalConfig, saveLocalConfig, type DeployMode } from "../../lib/config";
-import { playChime, unlockAudio } from "../../lib/chime";
+import {
+  ALARM_SOUNDS,
+  loadCustomAlarm,
+  playChime,
+  previewAlarm,
+  unlockAudio,
+  type AlarmSound,
+} from "../../lib/chime";
 import { setLocale, storedLocale } from "../../i18n";
 import { useAuth } from "../../auth/AuthContext";
 import { toastBus } from "../../lib/toastBus";
@@ -28,6 +35,46 @@ export function SettingsPage(): JSX.Element {
     soundRepeatSeconds: 30,
   });
   const [savedFlash, setSavedFlash] = useState(false);
+
+  const [alarm, setAlarm] = useState<AlarmSound>(
+    (loadLocalConfig().alarmSound as AlarmSound) ?? "ring",
+  );
+  const [alarmName, setAlarmName] = useState<string | null>(null);
+  const [alarmErr, setAlarmErr] = useState<string | null>(null);
+  const alarmFileRef = useRef<HTMLInputElement>(null);
+
+  const pickAlarm = (id: AlarmSound): void => {
+    setAlarm(id);
+    setAlarmErr(null);
+    saveLocalConfig({ alarmSound: id });
+    if (id !== "custom") void unlockAudio().then(() => previewAlarm(id));
+  };
+
+  const onAlarmFile = async (file: File): Promise<void> => {
+    setAlarmErr(null);
+    if (!file.type.startsWith("audio/")) {
+      setAlarmErr(t("settings.alarmBadType"));
+      return;
+    }
+    if (file.size > 1_400_000) {
+      setAlarmErr(t("settings.alarmTooBig"));
+      return;
+    }
+    const dataUrl = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+    if (!(await loadCustomAlarm(dataUrl))) {
+      setAlarmErr(t("settings.alarmBadType"));
+      return;
+    }
+    saveLocalConfig({ alarmSound: "custom", alarmCustomData: dataUrl });
+    setAlarm("custom");
+    setAlarmName(file.name);
+    void unlockAudio().then(() => previewAlarm("custom", dataUrl));
+  };
 
   useEffect(() => {
     if (settingsQ.data) {
@@ -210,6 +257,50 @@ export function SettingsPage(): JSX.Element {
                   🔊 {t("settings.testSound")}
                 </Button>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Field label={t("settings.alarmSound")}>
+                <Select
+                  value={alarm}
+                  onChange={(e) => pickAlarm(e.target.value as AlarmSound)}
+                >
+                  {ALARM_SOUNDS.map((s) => (
+                    <option key={s} value={s}>
+                      {t(`settings.alarmSounds.${s}`)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {alarm === "custom" ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => alarmFileRef.current?.click()}
+                  >
+                    {t("settings.alarmPickFile")}
+                  </Button>
+                  <span className="text-xs text-stone-500">
+                    {alarmName ??
+                      (loadLocalConfig().alarmCustomData
+                        ? t("settings.alarmFileSet")
+                        : t("settings.alarmNoFile"))}
+                  </span>
+                  <input
+                    ref={alarmFileRef}
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) void onAlarmFile(f);
+                    }}
+                  />
+                </div>
+              ) : null}
+              {alarmErr ? <p className="text-sm text-rose-600">{alarmErr}</p> : null}
+              <p className="text-xs text-stone-400">{t("settings.alarmHint")}</p>
             </div>
 
             {isAdmin ? (

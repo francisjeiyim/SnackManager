@@ -3,6 +3,10 @@ export type DeployMode = "server" | "autonomous";
 export interface LocalConfig {
   mode: DeployMode;
   apiUrl: string;
+  /** Which alert sound this device plays (see `lib/chime`). */
+  alarmSound?: string;
+  /** Data URL of a custom alarm audio file, when `alarmSound === "custom"`. */
+  alarmCustomData?: string;
 }
 
 const KEY = "sm.config";

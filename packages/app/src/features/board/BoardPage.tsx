@@ -21,6 +21,7 @@ import {
 } from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
 import { SeatInDialog } from "./SeatInDialog";
+import { SeatQuickMenu } from "./SeatQuickMenu";
 import { useSetAlerts } from "./useSetAlerts";
 import { TicketPanel } from "../ticket/TicketPanel";
 
@@ -39,6 +40,8 @@ export function BoardPage(): JSX.Element {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [seatInSeatId, setSeatInSeatId] = useState<string | null | undefined>(undefined);
   const [ticketId, setTicketId] = useState<string | null>(null);
+  const [quickSeatId, setQuickSeatId] = useState<string | null>(null);
+  const [immersive, setImmersive] = useState(false);
   const [canvasRef, canvasWidth] = useElementWidth<HTMLDivElement>();
   const [arrangeMode, setArrangeMode] = useState(false);
   const [arrangeDraft, setArrangeDraft] = useState<Map<string, { x: number; y: number }>>(new Map());
@@ -54,6 +57,29 @@ export function BoardPage(): JSX.Element {
   useEffect(() => {
     if (!activeRoomId && rooms[0]) setActiveRoomId(rooms[0].id);
   }, [rooms, activeRoomId]);
+
+  // Fullscreen / immersive Floor
+  useEffect(() => {
+    document.body.classList.toggle("sm-immersive", immersive);
+    return () => document.body.classList.remove("sm-immersive");
+  }, [immersive]);
+  useEffect(() => {
+    const onFs = (): void => {
+      if (!document.fullscreenElement) setImmersive(false);
+    };
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+  const toggleImmersive = (): void => {
+    const next = !immersive;
+    setImmersive(next);
+    try {
+      if (next) void document.documentElement.requestFullscreen?.().catch(() => undefined);
+      else if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => undefined);
+    } catch {
+      /* iOS Safari has no element fullscreen — the CSS immersive mode still applies */
+    }
+  };
 
   const room = rooms.find((r) => r.id === activeRoomId) ?? rooms[0];
   const guests = useMemo(() => guestsQ.data ?? [], [guestsQ.data]);
@@ -122,18 +148,36 @@ export function BoardPage(): JSX.Element {
   return (
     <div className="flex gap-4">
       <div className="min-w-0 flex-1 space-y-3">
-        {/* summary bar */}
-        <Card className="flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-3.5 text-sm">
-          <Stat label={t("board.seatsInUse")} value={String(summary.seatsInUse)} />
-          <Stat label={t("board.guestsCount")} value={String(summary.guests)} />
-          <Stat label={t("board.running")} value={yen(summary.runningYen, locale)} />
-          <Stat
-            label={t("board.longest")}
-            value={summary.longestMs ? duration(summary.longestMs) : "—"}
-          />
-        </Card>
+        {immersive ? (
+          <div className="fixed right-3 top-3 z-40 flex items-center gap-2">
+            {rooms.length > 1 ? (
+              <SegmentedControl
+                size="sm"
+                value={room?.id ?? ""}
+                onChange={setActiveRoomId}
+                options={rooms.map((r) => ({ value: r.id, label: r.name }))}
+              />
+            ) : null}
+            <Button size="sm" variant="secondary" onClick={toggleImmersive}>
+              ⤢ {t("board.exitFullscreen")}
+            </Button>
+          </div>
+        ) : null}
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* summary bar */}
+        {!immersive ? (
+          <Card className="flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-3.5 text-sm">
+            <Stat label={t("board.seatsInUse")} value={String(summary.seatsInUse)} />
+            <Stat label={t("board.guestsCount")} value={String(summary.guests)} />
+            <Stat label={t("board.running")} value={yen(summary.runningYen, locale)} />
+            <Stat
+              label={t("board.longest")}
+              value={summary.longestMs ? duration(summary.longestMs) : "—"}
+            />
+          </Card>
+        ) : null}
+
+        <div className={cn("flex flex-wrap items-center gap-2", immersive && "hidden")}>
           {rooms.length > 1 ? (
             <div className="max-w-full overflow-x-auto">
               <SegmentedControl
@@ -215,6 +259,9 @@ export function BoardPage(): JSX.Element {
               </>
             ) : (
               <>
+                <Button size="sm" variant="ghost" onClick={toggleImmersive}>
+                  ⛶ {t("board.fullscreen")}
+                </Button>
                 {canServe ? (
                   <Button size="sm" variant="ghost" onClick={() => setArrangeMode(true)}>
                     {t("board.rearrange")}
@@ -231,7 +278,7 @@ export function BoardPage(): JSX.Element {
         </div>
 
         {/* legend */}
-        <div className="flex flex-wrap gap-3 text-xs text-stone-500">
+        <div className={cn("flex flex-wrap gap-3 text-xs text-stone-500", immersive && "hidden")}>
           <LegendDot className="border-dashed border-stone-300 bg-stone-50" label={t("board.free")} />
           <LegendDot className="border-emerald-500 bg-emerald-50" label={t("board.occupied")} />
           <LegendDot className="border-amber-500 bg-amber-100" label={t("board.nearBoundary")} />
@@ -265,7 +312,8 @@ export function BoardPage(): JSX.Element {
                 setArrangeDraft((m) => new Map(m).set(seatId, { x, y }))
               }
               onSeatClick={(seatId, tId) => {
-                if (tId) setTicketId(tId);
+                if (guestsBySeat.has(seatId) || unpaidBySeat.has(seatId)) setQuickSeatId(seatId);
+                else if (tId) setTicketId(tId);
                 else if (canServe) setSeatInSeatId(seatId);
               }}
             />
@@ -296,6 +344,22 @@ export function BoardPage(): JSX.Element {
           occupiedSeatIds={occupiedSeatIds}
           initialSeatId={seatInSeatId}
           onClose={() => setSeatInSeatId(undefined)}
+        />
+      ) : null}
+
+      {quickSeatId && settingsQ.data ? (
+        <SeatQuickMenu
+          seatLabel={
+            room?.seats.find((s) => s.id === quickSeatId)?.label ?? t("board.title")
+          }
+          guests={guestsBySeat.get(quickSeatId) ?? []}
+          unpaidTicketId={unpaidBySeat.get(quickSeatId)?.ticketId ?? null}
+          settings={settingsQ.data}
+          onClose={() => setQuickSeatId(null)}
+          onOpenTicket={(id) => {
+            setQuickSeatId(null);
+            setTicketId(id);
+          }}
         />
       ) : null}
     </div>

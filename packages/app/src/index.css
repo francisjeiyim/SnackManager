@@ -41,6 +41,15 @@ body {
   }
 }
 
+/* Immersive Floor — hide the app chrome and let the plan fill the screen. */
+body.sm-immersive header {
+  display: none !important;
+}
+body.sm-immersive main {
+  padding: 0 !important;
+  max-width: none !important;
+}
+
 /* Native controls pick up the warm accent (checkboxes, date pickers, ranges). */
 input,
 select,

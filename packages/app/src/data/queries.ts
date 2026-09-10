@@ -4,6 +4,7 @@ import type {
   ExtensionKind,
   MergeInput,
   PaymentInput,
+  PaymentMethod,
   ProductInput,
   RoomInput,
   SeatInInput,
@@ -287,6 +288,34 @@ export function useSeatOutGuest() {
   const invalidate = useInvalidateService();
   return useMutation({
     mutationFn: (guestId: string) => repo.seatOutGuest(guestId),
+    onSuccess: invalidate,
+  });
+}
+
+/**
+ * One-tap "collect payment & free the seat" — closes the ticket if it is still
+ * open (billing only what was validated), then takes the full outstanding
+ * balance in one payment. Used by the Floor quick-action menu so the operator
+ * never has to open the invoice.
+ */
+export function useQuickSettle() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: async (vars: { ticketId: string; method?: PaymentMethod }) => {
+      let tk = await repo.getTicket(vars.ticketId);
+      if (tk.status === "OPEN") {
+        tk = await repo.closeTicket(vars.ticketId, { overdueExtension: "NONE" });
+      }
+      const balance = tk.totalYen - tk.paidYen;
+      if (balance > 0) {
+        await repo.takePayment(vars.ticketId, {
+          amountYen: balance,
+          method: vars.method ?? "CASH",
+        });
+      }
+      return repo.getTicket(vars.ticketId);
+    },
     onSuccess: invalidate,
   });
 }
