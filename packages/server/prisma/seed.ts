@@ -7,7 +7,15 @@ async function main(): Promise<void> {
   // --- settings -----------------------------------------------------
   await prisma.settings.upsert({
     where: { id: "settings" },
-    create: { id: "settings", defaultRatePerMinuteYen: 10, defaultLocale: "ja" },
+    create: {
+      id: "settings",
+      defaultRatePerMinuteYen: 10,
+      graceMinutes: 5,
+      setMinutes: 90,
+      setPriceYen: 2000,
+      halfSetPriceYen: 1000,
+      defaultLocale: "ja",
+    },
     update: {},
   });
 

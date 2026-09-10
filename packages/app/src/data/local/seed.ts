@@ -8,8 +8,8 @@ export function seedLocalDb(db: LocalDb): void {
   const ts = now();
 
   db.run(
-    `INSERT INTO "Settings" ("id","currency","defaultRatePerMinuteYen","graceMinutes","minChargeMinutes","timeRounding","defaultLocale","serviceDayCutoverHour","hourWarningIntervalMinutes","hourWarningMinutes","updatedAt")
-     VALUES ('settings','JPY',10,0,0,'CEIL_MINUTE','ja',5,60,10,?)`,
+    `INSERT INTO "Settings" ("id","currency","defaultRatePerMinuteYen","graceMinutes","minChargeMinutes","timeRounding","setMinutes","setPriceYen","halfSetPriceYen","soundAlertsEnabled","defaultLocale","serviceDayCutoverHour","hourWarningIntervalMinutes","hourWarningMinutes","updatedAt")
+     VALUES ('settings','JPY',10,5,0,'CEIL_MINUTE',90,2000,1000,1,'ja',5,60,10,?)`,
     [ts],
   );
 

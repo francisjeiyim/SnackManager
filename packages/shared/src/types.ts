@@ -33,6 +33,14 @@ export interface Settings {
   graceMinutes: number;
   minChargeMinutes: number;
   timeRounding: TimeRounding;
+  /** Length of one full set, in minutes (the first set is always charged whole). */
+  setMinutes: number;
+  /** Price of the first full set. */
+  setPriceYen: Yen;
+  /** Price of each extension half-set (`setMinutes / 2`). */
+  halfSetPriceYen: Yen;
+  /** Play a chime at each set / half-set boundary. */
+  soundAlertsEnabled: boolean;
   defaultLocale: Locale;
   /** Hour (0–23, local) at which the "service day" rolls over for ticket numbering. */
   serviceDayCutoverHour: number;
@@ -94,6 +102,10 @@ export interface Guest {
   timeChargeYen: Yen | null;
   ticketId: string | null;
   status: GuestStatus;
+  /** Pricing snapshotted at seat-in (0 → fall back to current Settings). */
+  setMinutesSnapshot: number;
+  setPriceYenSnapshot: Yen;
+  halfSetPriceYenSnapshot: Yen;
   /** Derived from the seat (not persisted on the guest). */
   seatLabel?: string | null;
   /** Active staff assignment, if any (derived, not persisted on the guest). */
@@ -201,16 +213,24 @@ export interface AuditLogEntry {
 
 /** The subset of {@link Settings} the billing engine reads. */
 export interface BillingSettings {
-  defaultRatePerMinuteYen: Yen;
   graceMinutes: number;
-  minChargeMinutes: number;
-  timeRounding: TimeRounding;
+  setMinutes: number;
+  setPriceYen: Yen;
+  halfSetPriceYen: Yen;
+  /** Legacy per-minute fields — kept for type compatibility, unused by set billing. */
+  defaultRatePerMinuteYen?: Yen;
+  minChargeMinutes?: number;
+  timeRounding?: TimeRounding;
 }
 
 export interface GuestCharge {
   guestId: string;
   billedMinutes: number;
   timeChargeYen: Yen;
+  /** 0 before the grace period elapses, 1 afterwards. */
+  sets: number;
+  /** Number of extension half-sets past the first full set. */
+  halfSets: number;
 }
 
 export interface TicketTotals {

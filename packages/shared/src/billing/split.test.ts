@@ -28,10 +28,10 @@ const origin = () =>
 
 describe("planEvenSplit", () => {
   it("divides the running total into equal shares summing to the total", () => {
-    // time: 2 * 10min * 10 = 200 ; products: 1000 ; total 1200
+    // time: 2 guests * 1 set (2000) = 4000 ; products: 1000 ; total 5000
     const plan = planEvenSplit(origin(), { mode: "EVEN", parts: 3 }, settings(), at(10));
-    expect(plan.total).toBe(1200);
-    expect(plan.shares).toEqual([400, 400, 400]);
+    expect(plan.total).toBe(5000);
+    expect(plan.shares).toEqual([1666, 1666, 1668]);
   });
 
   it("puts the odd yen on the last share", () => {
@@ -58,9 +58,9 @@ describe("planItemizedSplit", () => {
     expect(plan.newTicketId).toBe("t_new");
     expect(plan.moveGuestIds).toEqual(["g2"]);
     expect(plan.moveItemIds).toEqual(["i2"]);
-    // origin keeps g1 (100) + i1 (300) = 400 ; new gets g2 (100) + i2 (700) = 800
-    expect(plan.originTotals.totalYen).toBe(400);
-    expect(plan.newTotals.totalYen).toBe(800);
+    // origin keeps g1 (2000) + i1 (300) = 2300 ; new gets g2 (2000) + i2 (700) = 2700
+    expect(plan.originTotals.totalYen).toBe(2300);
+    expect(plan.newTotals.totalYen).toBe(2700);
   });
 
   it("rejects a guest that is not on the ticket", () => {
@@ -171,11 +171,11 @@ describe("planGroupedSplit", () => {
     expect(g0.guestIds).toEqual(["g1"]);
     expect(g1.guestIds).toEqual(["g2", "g3"]);
 
-    // group 0: g1 time (100) + shared item 900 = 1000
-    expect(g0.totals.totalYen).toBe(1000);
+    // group 0: g1 time (1 set 2000) + shared item 900 = 2900
+    expect(g0.totals.totalYen).toBe(2900);
     expect(g0.itemIds).toEqual(["iShared"]);
-    // group 1: g2+g3 time (200) + i1 (300) + i2 (500) = 1000
-    expect(g1.totals.totalYen).toBe(1000);
+    // group 1: g2+g3 time (2 sets 4000) + i1 (300) + i2 (500) = 4800
+    expect(g1.totals.totalYen).toBe(4800);
     expect(g1.itemIds).toEqual(["i1", "i2"]);
   });
 

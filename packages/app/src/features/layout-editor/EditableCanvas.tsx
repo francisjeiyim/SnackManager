@@ -98,7 +98,12 @@ export function EditableCanvas({
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-slate-300"
-      style={{ width: width * scale, height: height * scale, background: background ?? "#fff" }}
+      style={{
+        width: width * scale,
+        height: height * scale,
+        background: background ?? "#fff",
+        touchAction: "none",
+      }}
       onPointerDown={() => onSelect(null)}
       onPointerMove={move}
       onPointerUp={end}
@@ -126,6 +131,7 @@ export function EditableCanvas({
               height: seat.h * scale,
               transform: seat.rotationDeg ? `rotate(${seat.rotationDeg}deg)` : undefined,
               cursor: "move",
+              touchAction: "none",
             }}
             onPointerDown={(e) => begin(e, seat, "move")}
           >
@@ -134,11 +140,13 @@ export function EditableCanvas({
               <>
                 <span
                   className="absolute -top-7 left-1/2 h-4 w-4 -translate-x-1/2 cursor-grab rounded-full border-2 border-slate-900 bg-white"
+                  style={{ touchAction: "none" }}
                   onPointerDown={(e) => begin(e, seat, "rotate")}
                   title="rotate"
                 />
                 <span
                   className="absolute -bottom-1.5 -right-1.5 h-3.5 w-3.5 cursor-se-resize rounded-sm border-2 border-slate-900 bg-white"
+                  style={{ touchAction: "none" }}
                   onPointerDown={(e) => begin(e, seat, "resize")}
                   title="resize"
                 />

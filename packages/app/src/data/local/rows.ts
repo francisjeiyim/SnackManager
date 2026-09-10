@@ -27,6 +27,10 @@ export const toSettings = (r: Row): Settings => ({
   graceMinutes: n(r.graceMinutes),
   minChargeMinutes: n(r.minChargeMinutes),
   timeRounding: s(r.timeRounding) as Settings["timeRounding"],
+  setMinutes: n(r.setMinutes),
+  setPriceYen: n(r.setPriceYen),
+  halfSetPriceYen: n(r.halfSetPriceYen),
+  soundAlertsEnabled: bool(r.soundAlertsEnabled),
   defaultLocale: s(r.defaultLocale) as Settings["defaultLocale"],
   serviceDayCutoverHour: n(r.serviceDayCutoverHour),
   hourWarningIntervalMinutes: n(r.hourWarningIntervalMinutes),
@@ -35,8 +39,11 @@ export const toSettings = (r: Row): Settings => ({
 });
 
 export const toBillingSettings = (r: Row): BillingSettings => ({
-  defaultRatePerMinuteYen: n(r.defaultRatePerMinuteYen),
   graceMinutes: n(r.graceMinutes),
+  setMinutes: n(r.setMinutes),
+  setPriceYen: n(r.setPriceYen),
+  halfSetPriceYen: n(r.halfSetPriceYen),
+  defaultRatePerMinuteYen: n(r.defaultRatePerMinuteYen),
   minChargeMinutes: n(r.minChargeMinutes),
   timeRounding: s(r.timeRounding) as BillingSettings["timeRounding"],
 });
@@ -85,6 +92,9 @@ export const toGuest = (r: Row): Guest => ({
   arrivalAt: s(r.arrivalAt),
   closedAt: sn(r.closedAt),
   ratePerMinuteYenSnapshot: n(r.ratePerMinuteYenSnapshot),
+  setMinutesSnapshot: n(r.setMinutesSnapshot),
+  setPriceYenSnapshot: n(r.setPriceYenSnapshot),
+  halfSetPriceYenSnapshot: n(r.halfSetPriceYenSnapshot),
   billedMinutes: nn(r.billedMinutes),
   timeChargeYen: nn(r.timeChargeYen),
   ticketId: sn(r.ticketId),

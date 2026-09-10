@@ -44,10 +44,10 @@ describe("planMerge", () => {
 
   it("recomputes the combined total", () => {
     const plan = planMerge(target, [sourceA, sourceB], settings(), at(10));
-    // time: (gt + ga) * 10 min * 10 = 200 ; products: 200 + 500 + 300 = 1000
-    expect(plan.totals.timeYen).toBe(200);
+    // time: (gt + ga) * 1 set (2000) = 4000 ; products: 200 + 500 + 300 = 1000
+    expect(plan.totals.timeYen).toBe(4000);
     expect(plan.totals.productsYen).toBe(1000);
-    expect(plan.totals.totalYen).toBe(1200);
+    expect(plan.totals.totalYen).toBe(5000);
   });
 
   it("rejects a non-open ticket", () => {

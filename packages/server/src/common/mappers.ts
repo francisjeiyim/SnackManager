@@ -36,6 +36,10 @@ export const toSettings = (r: PSettings): Settings => ({
   graceMinutes: r.graceMinutes,
   minChargeMinutes: r.minChargeMinutes,
   timeRounding: r.timeRounding,
+  setMinutes: r.setMinutes,
+  setPriceYen: r.setPriceYen,
+  halfSetPriceYen: r.halfSetPriceYen,
+  soundAlertsEnabled: r.soundAlertsEnabled,
   defaultLocale: r.defaultLocale,
   serviceDayCutoverHour: r.serviceDayCutoverHour,
   hourWarningIntervalMinutes: r.hourWarningIntervalMinutes,
@@ -44,8 +48,11 @@ export const toSettings = (r: PSettings): Settings => ({
 });
 
 export const toBillingSettings = (r: PSettings): BillingSettings => ({
-  defaultRatePerMinuteYen: r.defaultRatePerMinuteYen,
   graceMinutes: r.graceMinutes,
+  setMinutes: r.setMinutes,
+  setPriceYen: r.setPriceYen,
+  halfSetPriceYen: r.halfSetPriceYen,
+  defaultRatePerMinuteYen: r.defaultRatePerMinuteYen,
   minChargeMinutes: r.minChargeMinutes,
   timeRounding: r.timeRounding,
 });
@@ -107,6 +114,9 @@ export const toGuest = (r: PGuestWithSeat): Guest => {
     arrivalAt: iso(r.arrivalAt),
     closedAt: isoOrNull(r.closedAt),
     ratePerMinuteYenSnapshot: r.ratePerMinuteYenSnapshot,
+    setMinutesSnapshot: r.setMinutesSnapshot,
+    setPriceYenSnapshot: r.setPriceYenSnapshot,
+    halfSetPriceYenSnapshot: r.halfSetPriceYenSnapshot,
     billedMinutes: r.billedMinutes,
     timeChargeYen: r.timeChargeYen,
     ticketId: r.ticketId,

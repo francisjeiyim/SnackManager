@@ -125,6 +125,11 @@ export class TicketsService {
     const s = await this.settings.getRaw();
     const rate = s.defaultRatePerMinuteYen;
     const serviceDay = serviceDayOf(now, s.serviceDayCutoverHour);
+    const setSnapshot = {
+      setMinutesSnapshot: s.setMinutes,
+      setPriceYenSnapshot: s.setPriceYen,
+      halfSetPriceYenSnapshot: s.halfSetPriceYen,
+    };
 
     const out = await this.prisma.$transaction(async (tx) => {
       const seatIds = input.guests.map((g) => g.seatId);
@@ -186,6 +191,7 @@ export class TicketsService {
             displayName: g.displayName ?? null,
             arrivalAt: now,
             ratePerMinuteYenSnapshot: rate,
+            ...setSnapshot,
             ticketId,
             status: "SEATED",
           },

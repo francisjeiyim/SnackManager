@@ -63,12 +63,27 @@ describe("SnackManager billing flow (e2e)", () => {
     await addItem(ticketId, products.fries.id, 1); // 500
 
     const closed = await close(ticketId, at(30));
-    // 2 guests * 30 min * 10 yen = 600 ; products 1700
-    expect(closed.body.timeYen).toBe(600);
+    // 2 guests * 1 set (2000) = 4000 ; products 1700
+    expect(closed.body.timeYen).toBe(4000);
     expect(closed.body.productsYen).toBe(1700);
-    expect(closed.body.totalYen).toBe(2300);
+    expect(closed.body.totalYen).toBe(5700);
     expect(closed.body.status).toBe("CLOSED");
     expect(closed.body.guests.every((g: { status: string }) => g.status === "CLOSED")).toBe(true);
+  });
+
+  it("bills in sets and half-sets, with a grace window", async () => {
+    const { seats } = ctx.seed;
+
+    // within the 5-min grace window → nothing
+    const a = await seatIn([seats[2].id]);
+    const closedA = await close(a.tickets[0].id, at(3));
+    expect(closedA.body.timeYen).toBe(0);
+
+    // 100 min → first full set (2000) + one half-set (1000)
+    const b = await seatIn([seats[3].id]);
+    const closedB = await close(b.tickets[0].id, at(100));
+    expect(closedB.body.timeYen).toBe(3000);
+    expect(closedB.body.guests[0].timeChargeYen).toBe(3000);
   });
 
   it("frees the seat once the ticket is closed", async () => {

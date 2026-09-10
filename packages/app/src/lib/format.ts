@@ -21,6 +21,16 @@ export function duration(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
+/** "1 set + 2 half-sets" / 「1セット+2ハーフ」 — empty when nothing is billed. */
+export function setLabel(sets: number, halfSets: number, locale: string = "ja"): string {
+  if (!sets && !halfSets) return locale === "ja" ? "—" : "—";
+  if (locale === "ja") {
+    return `${sets}セット${halfSets ? `+${halfSets}ハーフ` : ""}`;
+  }
+  const s = `${sets} set${sets > 1 ? "s" : ""}`;
+  return halfSets ? `${s} + ${halfSets} half-set${halfSets > 1 ? "s" : ""}` : s;
+}
+
 export function dateTime(iso: string, locale: string = "ja"): string {
   return new Date(iso).toLocaleString(intlLocale(locale), {
     dateStyle: "short",

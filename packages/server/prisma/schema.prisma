@@ -75,9 +75,13 @@ model Settings {
   id                      String       @id @default("settings")
   currency                Currency     @default(JPY)
   defaultRatePerMinuteYen Int          @default(10)
-  graceMinutes            Int          @default(0)
+  graceMinutes            Int          @default(5)
   minChargeMinutes        Int          @default(0)
   timeRounding            TimeRounding @default(CEIL_MINUTE)
+  setMinutes                Int          @default(90)
+  setPriceYen               Int          @default(2000)
+  halfSetPriceYen           Int          @default(1000)
+  soundAlertsEnabled        Boolean      @default(true)
   defaultLocale           Locale       @default(ja)
   serviceDayCutoverHour     Int          @default(5)
   hourWarningIntervalMinutes Int         @default(60)
@@ -169,6 +173,9 @@ model Guest {
   arrivalAt                DateTime    @default(now())
   closedAt                 DateTime?
   ratePerMinuteYenSnapshot Int
+  setMinutesSnapshot       Int         @default(90)
+  setPriceYenSnapshot      Int         @default(0)
+  halfSetPriceYenSnapshot  Int         @default(0)
   billedMinutes            Int?
   timeChargeYen            Int?
   ticketId                 String?

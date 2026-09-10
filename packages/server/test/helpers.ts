@@ -34,7 +34,15 @@ export async function truncateAll(prisma: PrismaService): Promise<void> {
 
 export async function seedMinimal(prisma: PrismaService) {
   await prisma.settings.create({
-    data: { id: "settings", defaultRatePerMinuteYen: 10, graceMinutes: 0, minChargeMinutes: 0 },
+    data: {
+      id: "settings",
+      defaultRatePerMinuteYen: 10,
+      graceMinutes: 5,
+      minChargeMinutes: 0,
+      setMinutes: 90,
+      setPriceYen: 2000,
+      halfSetPriceYen: 1000,
+    },
   });
   const admin = await prisma.user.create({
     data: {

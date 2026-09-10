@@ -1,0 +1,11 @@
+-- AlterTable
+ALTER TABLE "Guest" ADD COLUMN     "halfSetPriceYenSnapshot" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "setMinutesSnapshot" INTEGER NOT NULL DEFAULT 90,
+ADD COLUMN     "setPriceYenSnapshot" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "Settings" ADD COLUMN     "halfSetPriceYen" INTEGER NOT NULL DEFAULT 1000,
+ADD COLUMN     "setMinutes" INTEGER NOT NULL DEFAULT 90,
+ADD COLUMN     "setPriceYen" INTEGER NOT NULL DEFAULT 2000,
+ADD COLUMN     "soundAlertsEnabled" BOOLEAN NOT NULL DEFAULT true,
+ALTER COLUMN "graceMinutes" SET DEFAULT 5;

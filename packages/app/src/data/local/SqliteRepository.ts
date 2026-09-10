@@ -394,8 +394,8 @@ export class SqliteRepository implements SnackRepository {
         const ticketId = sharedId ?? mkTicket();
         ticketIds.add(ticketId);
         db.run(
-          `INSERT INTO "Guest" ("id","seatId","roomId","partyId","displayName","arrivalAt","ratePerMinuteYenSnapshot","ticketId","status","createdAt","updatedAt")
-           VALUES (?,?,?,?,?,?,?,?,'SEATED',?,?)`,
+          `INSERT INTO "Guest" ("id","seatId","roomId","partyId","displayName","arrivalAt","ratePerMinuteYenSnapshot","setMinutesSnapshot","setPriceYenSnapshot","halfSetPriceYenSnapshot","ticketId","status","createdAt","updatedAt")
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,'SEATED',?,?)`,
           [
             uuid(),
             g.seatId,
@@ -404,6 +404,9 @@ export class SqliteRepository implements SnackRepository {
             g.displayName ?? null,
             arrival,
             rate,
+            settings.setMinutes,
+            settings.setPriceYen,
+            settings.halfSetPriceYen,
             ticketId,
             nowIso(),
             nowIso(),

@@ -10,8 +10,11 @@ export function at(minutes: number): string {
 
 export function settings(overrides: Partial<BillingSettings> = {}): BillingSettings {
   return {
-    defaultRatePerMinuteYen: 10,
     graceMinutes: 0,
+    setMinutes: 90,
+    setPriceYen: 2000,
+    halfSetPriceYen: 1000,
+    defaultRatePerMinuteYen: 10,
     minChargeMinutes: 0,
     timeRounding: TimeRounding.CEIL_MINUTE,
     ...overrides,
@@ -32,6 +35,9 @@ export function guest(overrides: Partial<Guest> = {}): Guest {
     arrivalAt: T0,
     closedAt: null,
     ratePerMinuteYenSnapshot: 10,
+    setMinutesSnapshot: 90,
+    setPriceYenSnapshot: 2000,
+    halfSetPriceYenSnapshot: 1000,
     billedMinutes: null,
     timeChargeYen: null,
     ticketId: "t_1",

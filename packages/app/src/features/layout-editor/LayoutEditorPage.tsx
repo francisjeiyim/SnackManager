@@ -6,7 +6,6 @@ import {
   Button,
   Card,
   EmptyState,
-  Modal,
   SectionTitle,
   SegmentedControl,
   Skeleton,
@@ -184,22 +183,28 @@ export function LayoutEditorPage(): JSX.Element {
             <EmptyState icon="▢" title={t("board.noRooms")} hint={t("board.noRoomsHint")} />
           </Card>
         )}
+
+        {/* properties inline below the canvas on small screens — never covers it */}
+        {selected != null ? (
+          <Card className="p-3 lg:hidden">
+            <div className="flex items-center justify-between">
+              <SectionTitle>{t("layout.properties")}</SectionTitle>
+              <Button size="sm" variant="ghost" onClick={() => setSelectedId(null)}>
+                {t("common.close")}
+              </Button>
+            </div>
+            <div className="mt-2">{props}</div>
+          </Card>
+        ) : null}
       </div>
 
-      {/* properties: side column on lg+, bottom sheet on smaller screens */}
+      {/* properties: side column on lg+ */}
       <div className="hidden w-64 shrink-0 lg:block">
         <Card className="p-3">
           <SectionTitle>{t("layout.properties")}</SectionTitle>
           <div className="mt-2">{props}</div>
         </Card>
       </div>
-      {selected != null ? (
-        <div className="lg:hidden">
-          <Modal open title={t("layout.properties")} onClose={() => setSelectedId(null)}>
-            {props}
-          </Modal>
-        </div>
-      ) : null}
 
       {showRoomSettings && room ? (
         <RoomSettingsModal

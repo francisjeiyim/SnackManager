@@ -21,9 +21,9 @@ describe("computeTicketTotals", () => {
       items: [item({ unitPriceYen: 300, quantity: 2 }), item({ unitPriceYen: 500, quantity: 1 })],
     });
     const totals = computeTicketTotals(b, settings(), at(30));
-    expect(totals.timeYen).toBe(600); // 2 guests * 30 min * 10
+    expect(totals.timeYen).toBe(4000); // 2 guests * 1 set (2000)
     expect(totals.productsYen).toBe(1100);
-    expect(totals.totalYen).toBe(1700);
+    expect(totals.totalYen).toBe(5100);
     expect(totals.perGuest).toHaveLength(2);
   });
 

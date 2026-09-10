@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button, Card, EmptyState, Modal, Select, Skeleton } from "../../components/ui";
-import { dateTime, yen } from "../../lib/format";
+import { dateTime, setLabel, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { printReceipt } from "../../lib/printReceipt";
 import { useTicketHistory } from "../../data/queries";
@@ -106,7 +106,19 @@ export function InvoicesPage(): JSX.Element {
                     ) : null}
                   </span>
                   <span className="tabular-nums text-slate-500">
-                    {g.billedMinutes ?? "—"} min · {yen(g.timeChargeYen ?? 0, locale)}
+                    {(() => {
+                      const c = g.timeChargeYen ?? 0;
+                      const half = g.halfSetPriceYenSnapshot || 0;
+                      const sets = c > 0 ? 1 : 0;
+                      const halfSets =
+                        sets && half > 0
+                          ? Math.max(0, Math.round((c - (g.setPriceYenSnapshot || 0)) / half))
+                          : 0;
+                      return `${sets ? setLabel(sets, halfSets, locale) + " · " : ""}${
+                        g.billedMinutes ?? "—"
+                      } min`;
+                    })()}{" "}
+                    · {yen(g.timeChargeYen ?? 0, locale)}
                   </span>
                 </div>
               ))}

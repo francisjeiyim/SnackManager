@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { TimeRounding } from "@snackmanager/shared";
 import { Button, Card, Field, Input, Select, Spinner } from "../../components/ui";
 import { loadLocalConfig, saveLocalConfig, type DeployMode } from "../../lib/config";
+import { playChime, unlockAudio } from "../../lib/chime";
 import { setLocale, storedLocale } from "../../i18n";
 import { useAuth } from "../../auth/AuthContext";
 import { useSaveSettings, useSettings } from "../../data/queries";
@@ -18,24 +18,24 @@ export function SettingsPage(): JSX.Element {
 
   const [local, setLocal] = useState(loadLocalConfig());
   const [form, setForm] = useState({
-    defaultRatePerMinuteYen: 10,
-    graceMinutes: 0,
-    minChargeMinutes: 0,
-    timeRounding: "CEIL_MINUTE" as TimeRounding,
-    hourWarningIntervalMinutes: 60,
+    setMinutes: 90,
+    setPriceYen: 2000,
+    halfSetPriceYen: 1000,
+    graceMinutes: 5,
     hourWarningMinutes: 10,
+    soundAlertsEnabled: true,
   });
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
     if (settingsQ.data) {
       setForm({
-        defaultRatePerMinuteYen: settingsQ.data.defaultRatePerMinuteYen,
+        setMinutes: settingsQ.data.setMinutes,
+        setPriceYen: settingsQ.data.setPriceYen,
+        halfSetPriceYen: settingsQ.data.halfSetPriceYen,
         graceMinutes: settingsQ.data.graceMinutes,
-        minChargeMinutes: settingsQ.data.minChargeMinutes,
-        timeRounding: settingsQ.data.timeRounding,
-        hourWarningIntervalMinutes: settingsQ.data.hourWarningIntervalMinutes,
         hourWarningMinutes: settingsQ.data.hourWarningMinutes,
+        soundAlertsEnabled: settingsQ.data.soundAlertsEnabled,
       });
     }
   }, [settingsQ.data]);
@@ -96,65 +96,66 @@ export function SettingsPage(): JSX.Element {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label={t("settings.ratePerMinute")}>
+              <Field label={t("settings.setMinutes")} hint={t("settings.setMinutesHint")}>
                 <Input
                   type="number"
+                  min={1}
                   disabled={!isAdmin}
-                  value={form.defaultRatePerMinuteYen}
-                  onChange={(e) =>
-                    setForm({ ...form, defaultRatePerMinuteYen: Number(e.target.value) || 0 })
-                  }
+                  value={form.setMinutes}
+                  onChange={(e) => {
+                    const setMinutes = Math.max(1, Number(e.target.value) || 1);
+                    setForm({ ...form, setMinutes });
+                  }}
                 />
               </Field>
-              <Field label={t("settings.rounding")}>
-                <Select
-                  disabled={!isAdmin}
-                  value={form.timeRounding}
-                  onChange={(e) =>
-                    setForm({ ...form, timeRounding: e.target.value as TimeRounding })
-                  }
-                >
-                  <option value="NONE">{t("settings.roundingNone")}</option>
-                  <option value="CEIL_MINUTE">{t("settings.roundingCeilMinute")}</option>
-                  <option value="CEIL_5MIN">{t("settings.roundingCeil5Min")}</option>
-                </Select>
-              </Field>
-              <Field label={t("settings.graceMinutes")}>
-                <Input
-                  type="number"
-                  disabled={!isAdmin}
-                  value={form.graceMinutes}
-                  onChange={(e) => setForm({ ...form, graceMinutes: Number(e.target.value) || 0 })}
-                />
-              </Field>
-              <Field label={t("settings.minChargeMinutes")}>
-                <Input
-                  type="number"
-                  disabled={!isAdmin}
-                  value={form.minChargeMinutes}
-                  onChange={(e) =>
-                    setForm({ ...form, minChargeMinutes: Number(e.target.value) || 0 })
-                  }
-                />
-              </Field>
-              <Field label={t("settings.alertInterval")} hint={t("settings.alertIntervalHint")}>
+              <Field label={t("settings.graceMinutes")} hint={t("settings.graceMinutesHint")}>
                 <Input
                   type="number"
                   min={0}
-                  max={600}
                   disabled={!isAdmin}
-                  value={form.hourWarningIntervalMinutes}
+                  value={form.graceMinutes}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      hourWarningIntervalMinutes: Math.min(
-                        600,
-                        Math.max(0, Number(e.target.value) || 0),
-                      ),
-                    })
+                    setForm({ ...form, graceMinutes: Math.max(0, Number(e.target.value) || 0) })
                   }
                 />
               </Field>
+              <Field label={t("settings.setPrice")}>
+                <Input
+                  type="number"
+                  min={0}
+                  disabled={!isAdmin}
+                  value={form.setPriceYen}
+                  onChange={(e) => {
+                    const setPriceYen = Math.max(0, Number(e.target.value) || 0);
+                    setForm((f) => ({
+                      ...f,
+                      setPriceYen,
+                      // keep the half-set at half of the set unless it was edited away from it
+                      halfSetPriceYen:
+                        f.halfSetPriceYen === Math.round(f.setPriceYen / 2)
+                          ? Math.round(setPriceYen / 2)
+                          : f.halfSetPriceYen,
+                    }));
+                  }}
+                />
+              </Field>
+              <Field label={t("settings.halfSetPrice")} hint={t("settings.halfSetPriceHint")}>
+                <Input
+                  type="number"
+                  min={0}
+                  disabled={!isAdmin}
+                  value={form.halfSetPriceYen}
+                  onChange={(e) =>
+                    setForm({ ...form, halfSetPriceYen: Math.max(0, Number(e.target.value) || 0) })
+                  }
+                />
+              </Field>
+            </div>
+
+            <h3 className="pt-1 text-xs font-semibold uppercase text-stone-400">
+              {t("settings.alerts")}
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label={t("settings.alertLead")} hint={t("settings.alertLeadHint")}>
                 <Input
                   type="number"
@@ -170,7 +171,29 @@ export function SettingsPage(): JSX.Element {
                   }
                 />
               </Field>
+              <div className="flex flex-col justify-end gap-1.5">
+                <label className="flex items-center gap-2 text-sm text-stone-600">
+                  <input
+                    type="checkbox"
+                    disabled={!isAdmin}
+                    checked={form.soundAlertsEnabled}
+                    onChange={(e) => setForm({ ...form, soundAlertsEnabled: e.target.checked })}
+                  />
+                  {t("settings.soundAlerts")}
+                </label>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    void unlockAudio();
+                    void playChime("hard");
+                  }}
+                >
+                  🔊 {t("settings.testSound")}
+                </Button>
+              </div>
             </div>
+
             {isAdmin ? (
               <div className="flex items-center gap-3">
                 <Button disabled={save.isPending} onClick={submit}>

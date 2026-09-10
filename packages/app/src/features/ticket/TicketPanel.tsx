@@ -8,7 +8,7 @@ import {
 } from "@snackmanager/shared";
 import { Badge, Button, Card, IconButton, SectionTitle, Skeleton } from "../../components/ui";
 import { EditableText } from "../../components/EditableText";
-import { duration, yen } from "../../lib/format";
+import { duration, setLabel, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { useNow } from "../../lib/useNow";
 import { usePermissions } from "../../lib/permissions";
@@ -139,6 +139,11 @@ export function TicketPanel({
                     </div>
                     <div className="flex items-center gap-2 text-xs tabular-nums text-stone-400">
                       <span>{duration(ms)}</span>
+                      {charge.sets > 0 ? (
+                        <span className="rounded bg-stone-100 px-1 font-medium text-stone-500">
+                          {setLabel(charge.sets, charge.halfSets, locale)}
+                        </span>
+                      ) : null}
                       <span className="font-medium text-stone-600">
                         {yen(charge.timeChargeYen, locale)}
                       </span>

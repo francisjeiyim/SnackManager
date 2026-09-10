@@ -13,6 +13,7 @@ import { useRepository } from "../../data/RepositoryContext";
 import { useActiveGuests, useLiveTickets, useRooms, useSettings } from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
 import { SeatInDialog } from "./SeatInDialog";
+import { useSetAlerts } from "./useSetAlerts";
 import { TicketPanel } from "../ticket/TicketPanel";
 
 export function BoardPage(): JSX.Element {
@@ -55,6 +56,12 @@ export function BoardPage(): JSX.Element {
   }, [guests]);
 
   const occupiedSeatIds = useMemo(() => new Set(guestsBySeat.keys()), [guestsBySeat]);
+
+  useSetAlerts(guestsBySeat, useNow(2000), {
+    setMinutes: settingsQ.data?.setMinutes ?? 90,
+    leadMinutes: settingsQ.data?.hourWarningMinutes ?? 0,
+    enabled: settingsQ.data?.soundAlertsEnabled ?? true,
+  });
 
   const summary = useMemo(() => {
     const longestMs = guests.reduce(
@@ -120,8 +127,8 @@ export function BoardPage(): JSX.Element {
         <div className="flex flex-wrap gap-3 text-xs text-stone-500">
           <LegendDot className="border-dashed border-stone-300 bg-stone-50" label={t("board.free")} />
           <LegendDot className="border-emerald-500 bg-emerald-50" label={t("board.occupied")} />
-          <LegendDot className="border-amber-500 bg-amber-100" label={t("board.overtime")} />
-          <LegendDot className="border-rose-500 bg-rose-100" label={t("board.alert")} />
+          <LegendDot className="border-amber-500 bg-amber-100" label={t("board.nearBoundary")} />
+          <LegendDot className="border-rose-500 bg-rose-100" label={t("board.atBoundary")} />
           <span className="inline-flex items-center gap-1.5">
             <span className="rounded-full bg-white px-1 text-[10px] font-semibold ring-1 ring-stone-300">
               ×N
@@ -140,8 +147,8 @@ export function BoardPage(): JSX.Element {
               room={room}
               guestsBySeat={guestsBySeat}
               containerWidth={canvasWidth}
-              alertIntervalMinutes={settingsQ.data?.hourWarningIntervalMinutes ?? 0}
-              alertLeadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
+              setMinutes={settingsQ.data?.setMinutes ?? 90}
+              leadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
               onSeatClick={(seatId, tId) => {
                 if (tId) setTicketId(tId);
                 else if (canServe) setSeatInSeatId(seatId);

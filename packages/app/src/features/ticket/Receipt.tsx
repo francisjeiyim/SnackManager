@@ -1,5 +1,5 @@
 import { elapsedMs } from "@snackmanager/shared";
-import { duration, yen } from "../../lib/format";
+import { duration, setLabel, yen } from "../../lib/format";
 import type { TicketView } from "../../data/repository";
 
 interface Props {
@@ -41,7 +41,17 @@ export function Receipt({ ticket, locale, shopName = "SnackManager" }: Props): J
           <div className="row" key={g.id}>
             <span>
               {g.displayName ?? `#${i + 1}`}
-              {g.seatLabel ? ` [${g.seatLabel}]` : ""} · {duration(ms)}
+              {g.seatLabel ? ` [${g.seatLabel}]` : ""} ·{" "}
+              {(() => {
+                const c = g.timeChargeYen ?? 0;
+                const half = g.halfSetPriceYenSnapshot || 0;
+                const sets = c > 0 ? 1 : 0;
+                const halfSets =
+                  sets && half > 0
+                    ? Math.max(0, Math.round((c - (g.setPriceYenSnapshot || 0)) / half))
+                    : 0;
+                return sets ? `${setLabel(sets, halfSets, locale)} (${duration(ms)})` : duration(ms);
+              })()}
             </span>
             <span>{yen(g.timeChargeYen ?? 0, locale)}</span>
           </div>

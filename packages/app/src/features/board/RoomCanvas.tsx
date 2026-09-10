@@ -4,11 +4,12 @@ import { elapsedMs } from "@snackmanager/shared";
 import { cn } from "../../lib/cn";
 import { duration } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
+import { currentSetWindow } from "../../lib/setAlerts";
 import type { RoomWithSeats } from "../../data/repository";
 
 const OVERTIME_MIN = 120;
 
-type SeatState = "free" | "occupied" | "overtime" | "alert";
+type SeatState = "free" | "occupied" | "overtime" | "near" | "alert";
 
 const stateStyles: Record<SeatState, { box: string; dot: string }> = {
   free: {
@@ -23,8 +24,12 @@ const stateStyles: Record<SeatState, { box: string; dot: string }> = {
     box: "border-amber-500 bg-amber-100 text-amber-900",
     dot: "bg-amber-500",
   },
+  near: {
+    box: "border-amber-500 bg-amber-100 text-amber-900 ring-2 ring-amber-400 ring-offset-1",
+    dot: "bg-amber-500",
+  },
   alert: {
-    box: "border-rose-500 bg-rose-100 text-rose-900 ring-2 ring-rose-400 ring-offset-1",
+    box: "border-rose-500 bg-rose-100 text-rose-900 ring-4 ring-rose-500 ring-offset-1",
     dot: "bg-rose-500",
   },
 };
@@ -34,10 +39,10 @@ interface Props {
   guestsBySeat: Map<string, Guest[]>;
   /** Available width for the plan; the canvas scales to fit it. */
   containerWidth: number;
-  /** Alert interval in minutes (0 = off). */
-  alertIntervalMinutes: number;
-  /** Blink lead time before each interval boundary (0 = off). */
-  alertLeadMinutes: number;
+  /** Length of one set, in minutes (drives the alert boundaries). */
+  setMinutes: number;
+  /** Minutes before a boundary the pre-alert marker shows (0 = off). */
+  leadMinutes: number;
   onSeatClick: (seatId: string, ticketId: string | null) => void;
 }
 
@@ -45,8 +50,8 @@ export function RoomCanvas({
   room,
   guestsBySeat,
   containerWidth,
-  alertIntervalMinutes,
-  alertLeadMinutes,
+  setMinutes,
+  leadMinutes,
   onSeatClick,
 }: Props): JSX.Element {
   const { t } = useTranslation();
@@ -70,19 +75,21 @@ export function RoomCanvas({
         const earliest = occupied ? Math.min(...guests.map((g) => Date.parse(g.arrivalAt))) : 0;
         const mins = occupied ? elapsedMs(new Date(earliest), now) / 60_000 : 0;
         const overtime = mins >= OVERTIME_MIN;
-        const nearAlert =
-          occupied &&
-          alertIntervalMinutes > 0 &&
-          alertLeadMinutes > 0 &&
-          mins >= alertIntervalMinutes - alertLeadMinutes &&
-          mins % alertIntervalMinutes >= alertIntervalMinutes - alertLeadMinutes;
+        const win = occupied ? currentSetWindow(mins, setMinutes) : null;
+        // just crossed a set / half-set boundary — strong, brief marker
+        const atBoundary = !!win && win.lastIndex >= 0 && mins - win.lastAt < 2;
+        // inside the configurable lead window before the next boundary
+        const nearBoundary =
+          !!win && leadMinutes > 0 && !atBoundary && win.nextAt - mins <= leadMinutes;
         const state: SeatState = !occupied
           ? "free"
-          : nearAlert
+          : atBoundary
             ? "alert"
-            : overtime
-              ? "overtime"
-              : "occupied";
+            : nearBoundary
+              ? "near"
+              : overtime
+                ? "overtime"
+                : "occupied";
         const style = stateStyles[state];
         const ticketId = guests[0]?.ticketId ?? null;
         const assignment = guests.find((g) => g.assignment)?.assignment ?? null;
@@ -142,7 +149,6 @@ export function RoomCanvas({
                 seat.shape === "ROUND" ? "rounded-full" : "rounded-xl",
                 !seat.isActive && "opacity-30",
                 style.box,
-                nearAlert && "sm-blink",
               )}
               style={{
                 left,

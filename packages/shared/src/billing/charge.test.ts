@@ -14,21 +14,36 @@ describe("computeTimeCharge", () => {
   });
 });
 
-describe("computeGuestCharge", () => {
-  it("uses `now` for a seated guest (live estimate)", () => {
-    const g = guest({ ratePerMinuteYenSnapshot: 8, arrivalAt: T0 });
+describe("computeGuestCharge (set billing)", () => {
+  it("charges the first full set for a seated guest past the grace window", () => {
+    const g = guest({ arrivalAt: T0 });
     expect(computeGuestCharge(g, settings(), at(15))).toEqual({
       guestId: g.id,
       billedMinutes: 15,
-      timeChargeYen: 120,
+      timeChargeYen: 2000,
+      sets: 1,
+      halfSets: 0,
     });
   });
 
-  it("uses closedAt when the guest has left but has no snapshot yet", () => {
-    const g = guest({ arrivalAt: T0, closedAt: at(20), ratePerMinuteYenSnapshot: 10 });
+  it("charges nothing while within the grace window", () => {
+    const g = guest({ arrivalAt: T0 });
+    expect(computeGuestCharge(g, settings({ graceMinutes: 5 }), at(4))).toMatchObject({
+      billedMinutes: 0,
+      timeChargeYen: 0,
+      sets: 0,
+      halfSets: 0,
+    });
+  });
+
+  it("adds half-sets past the first set, up to closedAt", () => {
+    const g = guest({ arrivalAt: T0, closedAt: at(136) });
     expect(computeGuestCharge(g, settings(), at(999))).toMatchObject({
-      billedMinutes: 20,
-      timeChargeYen: 200,
+      billedMinutes: 136,
+      // 1 set (2000) + 2 half-sets (2 * 1000)
+      timeChargeYen: 4000,
+      sets: 1,
+      halfSets: 2,
     });
   });
 
@@ -39,17 +54,31 @@ describe("computeGuestCharge", () => {
       billedMinutes: 999,
       timeChargeYen: 12_345,
     });
-    expect(computeGuestCharge(g, settings(), at(999))).toEqual({
+    expect(computeGuestCharge(g, settings(), at(999))).toMatchObject({
       guestId: g.id,
       billedMinutes: 999,
       timeChargeYen: 12_345,
     });
   });
 
-  it("snapshots the rate at seat-in, not the current default", () => {
-    const g = guest({ ratePerMinuteYenSnapshot: 5, arrivalAt: T0 });
+  it("uses the pricing snapshotted at seat-in, not the current Settings", () => {
+    const g = guest({ arrivalAt: T0, setPriceYenSnapshot: 500, halfSetPriceYenSnapshot: 250 });
     expect(
-      computeGuestCharge(g, settings({ defaultRatePerMinuteYen: 999 }), at(10)).timeChargeYen,
-    ).toBe(50);
+      computeGuestCharge(g, settings({ setPriceYen: 9999, halfSetPriceYen: 9999 }), at(10))
+        .timeChargeYen,
+    ).toBe(500);
+  });
+
+  it("falls back to current Settings when the snapshot is missing (pre-migration guest)", () => {
+    const g = guest({
+      arrivalAt: T0,
+      setMinutesSnapshot: 0,
+      setPriceYenSnapshot: 0,
+      halfSetPriceYenSnapshot: 0,
+    });
+    expect(
+      computeGuestCharge(g, settings({ setPriceYen: 1500, halfSetPriceYen: 700 }), at(10))
+        .timeChargeYen,
+    ).toBe(1500);
   });
 });

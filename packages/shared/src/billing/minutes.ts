@@ -1,11 +1,13 @@
 import { TimeRounding } from "../enums.js";
 import { elapsedMinutesExact } from "../time.js";
-import type { BillingSettings, Instant } from "../types.js";
+import type { Instant } from "../types.js";
 
-export type MinutesSettings = Pick<
-  BillingSettings,
-  "graceMinutes" | "minChargeMinutes" | "timeRounding"
->;
+/** Inputs to the legacy per-minute billing math. */
+export interface MinutesSettings {
+  graceMinutes: number;
+  minChargeMinutes: number;
+  timeRounding: TimeRounding;
+}
 
 /** Apply the configured rounding to a fractional minute count. */
 export function applyRounding(minutes: number, mode: TimeRounding): number {

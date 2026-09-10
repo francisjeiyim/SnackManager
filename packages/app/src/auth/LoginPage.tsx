@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
 import { Button, Card, Field, Input } from "../components/ui";
+import { unlockAudio } from "../lib/chime";
 
 export function LoginPage(): JSX.Element {
   const { t } = useTranslation();
@@ -15,6 +16,7 @@ export function LoginPage(): JSX.Element {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    void unlockAudio(); // this click is our chance to permit alert sounds
     try {
       await login(username.trim(), password);
     } catch {

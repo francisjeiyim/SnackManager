@@ -1,6 +1,8 @@
 export { BillingError } from "./errors.js";
 export { applyRounding, computeBilledMinutes } from "./minutes.js";
 export type { MinutesSettings } from "./minutes.js";
+export { computeSetCharge } from "./sets.js";
+export type { SetPricing, SetCharge } from "./sets.js";
 export { computeGuestCharge, computeTimeCharge } from "./charge.js";
 export { computeTicketTotals, itemLineYen } from "./totals.js";
 export { planClose } from "./close.js";

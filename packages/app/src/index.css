@@ -26,20 +26,6 @@ body {
     "Noto Sans JP", Meiryo, sans-serif;
 }
 
-/* Board: an occupied seat blinks as it approaches an alert boundary. */
-@keyframes sm-blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-.sm-blink {
-  animation: sm-blink 1s ease-in-out infinite;
-}
-
 /* Receipt printing: hide the app, show only #print-area on paper. */
 #print-area {
   display: none;

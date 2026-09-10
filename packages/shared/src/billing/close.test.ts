@@ -27,13 +27,13 @@ describe("planClose", () => {
 
     expect(plan.closedAt).toBe(at(25));
     expect(plan.guests).toEqual([
-      { guestId: "g1", closedAt: at(25), billedMinutes: 25, timeChargeYen: 250 },
-      { guestId: "g2", closedAt: at(25), billedMinutes: 25, timeChargeYen: 250 },
+      { guestId: "g1", closedAt: at(25), billedMinutes: 25, timeChargeYen: 2000 },
+      { guestId: "g2", closedAt: at(25), billedMinutes: 25, timeChargeYen: 2000 },
     ]);
     expect(plan.freeSeatIds).toEqual(["s1", "s2"]);
-    expect(plan.totals.timeYen).toBe(500);
+    expect(plan.totals.timeYen).toBe(4000);
     expect(plan.totals.productsYen).toBe(400);
-    expect(plan.totals.totalYen).toBe(900);
+    expect(plan.totals.totalYen).toBe(4400);
   });
 
   it("leaves already-closed guests untouched", () => {
@@ -51,7 +51,7 @@ describe("planClose", () => {
     });
     const plan = planClose(b, settings(), at(30));
     expect(plan.guests.map((g) => g.guestId)).toEqual(["g2"]);
-    expect(plan.totals.timeYen).toBe(100 + 300);
+    expect(plan.totals.timeYen).toBe(100 + 2000);
   });
 
   it("refuses to close a ticket that is not OPEN", () => {
