@@ -31,8 +31,7 @@ export const keys = {
   products: (all: boolean) => ["products", { all }] as const,
   activeGuests: ["guests", "active"] as const,
   liveTickets: ["tickets", "live"] as const,
-  ticketHistory: (status?: string, from?: string, to?: string) =>
-    ["tickets", "history", status ?? "all", from ?? "", to ?? ""] as const,
+  ticketHistory: (status?: string) => ["tickets", "history", status ?? "all"] as const,
   ticket: (id: string) => ["tickets", "one", id] as const,
   users: ["users"] as const,
 };
@@ -81,11 +80,11 @@ export function useLiveTickets() {
   });
 }
 
-export function useTicketHistory(status?: string, from?: string, to?: string) {
+export function useTicketHistory(status?: string) {
   const repo = useRepository();
   return useQuery({
-    queryKey: keys.ticketHistory(status, from, to),
-    queryFn: () => repo.listTickets({ status, from, to }),
+    queryKey: keys.ticketHistory(status),
+    queryFn: () => repo.listTickets({ status }),
   });
 }
 

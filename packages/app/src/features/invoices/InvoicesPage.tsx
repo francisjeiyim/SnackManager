@@ -17,8 +17,20 @@ export function InvoicesPage(): JSX.Element {
   const [status, setStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const historyQ = useTicketHistory(status || undefined, from || undefined, to || undefined);
+  const historyQ = useTicketHistory(status || undefined);
   const [detail, setDetail] = useState<TicketView | null>(null);
+
+  // Local calendar day (YYYY-MM-DD) of an ISO timestamp — matches the column the
+  // operator reads, not the internal accounting "service day".
+  const localDay = (iso: string): string => new Date(iso).toLocaleDateString("en-CA");
+  const rows = (historyQ.data ?? []).filter((tk) => {
+    if (!from && !to) return true;
+    const d = localDay(tk.openedAt);
+    const dc = tk.closedAt ? localDay(tk.closedAt) : d;
+    if (from && d < from && dc < from) return false;
+    if (to && d > to && dc > to) return false;
+    return true;
+  });
 
   const dateInput =
     "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-accent focus:outline-none";
@@ -72,7 +84,7 @@ export function InvoicesPage(): JSX.Element {
               <Skeleton key={i} className="h-9 w-full" />
             ))}
           </div>
-        ) : (historyQ.data ?? []).length === 0 ? (
+        ) : rows.length === 0 ? (
           <EmptyState icon="▤" title={t("invoices.empty")} />
         ) : (
           <div className="overflow-x-auto">
@@ -87,7 +99,7 @@ export function InvoicesPage(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {(historyQ.data ?? []).map((tk) => (
+                {rows.map((tk) => (
                   <tr
                     key={tk.id}
                     onClick={() => setDetail(tk)}
