@@ -35,9 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     }
     setOnSessionLost(() => authStore.clear());
     let cancelled = false;
+    const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
     void (async () => {
       const rt = authStore.refreshToken();
-      if (rt) {
+      // Ride out a transient tunnel / network blip on startup — only give up
+      // when the server explicitly says the token is dead.
+      for (let attempt = 0; rt && attempt < 4 && !cancelled; attempt++) {
         try {
           const res = await fetch(`${apiUrl}/api/auth/refresh`, {
             method: "POST",
@@ -50,11 +54,16 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
               headers: { authorization: `Bearer ${data.accessToken}` },
             }).then((r) => r.json())) as SessionUser;
             if (!cancelled) authStore.setSession(me, data.accessToken, data.refreshToken);
-          } else {
-            authStore.clear();
+            break;
           }
+          if (res.status === 401 || res.status === 403 || res.status === 400) {
+            authStore.clear();
+            break;
+          }
+          // 5xx — back off and retry
+          await sleep(500 * 2 ** attempt);
         } catch {
-          authStore.clear();
+          await sleep(500 * 2 ** attempt);
         }
       }
       if (!cancelled) setLoading(false);
