@@ -15,23 +15,23 @@ type SeatState = "free" | "occupied" | "overtime" | "near" | "alert";
 
 const stateStyles: Record<SeatState, { box: string; dot: string }> = {
   free: {
-    box: "border-dashed border-stone-300 bg-stone-50/80 text-stone-400",
+    box: "border-dashed border-stone-300 bg-white/50 text-stone-400",
     dot: "bg-stone-300",
   },
   occupied: {
-    box: "border-emerald-500 bg-emerald-50 text-emerald-800",
+    box: "border-emerald-400 bg-emerald-50 text-emerald-800 shadow-sm",
     dot: "bg-emerald-500",
   },
   overtime: {
-    box: "border-amber-500 bg-amber-100 text-amber-900",
+    box: "border-amber-400 bg-amber-50 text-amber-900 shadow-sm",
     dot: "bg-amber-500",
   },
   near: {
-    box: "border-amber-500 bg-amber-100 text-amber-900 ring-2 ring-amber-400 ring-offset-1",
+    box: "border-amber-500 bg-amber-100 text-amber-900 ring-2 ring-amber-300/70 ring-offset-2 ring-offset-canvas shadow-sm",
     dot: "bg-amber-500",
   },
   alert: {
-    box: "border-rose-500 bg-rose-100 text-rose-900 ring-4 ring-rose-500 ring-offset-1",
+    box: "border-rose-500 bg-rose-100 text-rose-900 ring-4 ring-rose-400/50 ring-offset-2 ring-offset-canvas shadow-lift animate-pulse-ring",
     dot: "bg-rose-500",
   },
 };
@@ -214,8 +214,8 @@ export function RoomCanvas({
               }}
               title={seat.label}
               className={cn(
-                "absolute flex flex-col items-center justify-center gap-0.5 border-[3px] text-sm font-bold shadow-sm transition-colors",
-                seat.shape === "ROUND" ? "rounded-full" : "rounded-xl",
+                "absolute flex flex-col items-center justify-center gap-0.5 border-[3px] text-sm font-bold transition-all duration-200",
+                seat.shape === "ROUND" ? "rounded-full" : "rounded-2xl",
                 !seat.isActive && "opacity-30",
                 arrangeMode && "cursor-move ring-2 ring-sky-400",
                 style.box,

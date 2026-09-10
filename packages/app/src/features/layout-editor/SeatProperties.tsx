@@ -75,7 +75,7 @@ export function SeatProperties({ seat, onChange, onDelete }: Props): JSX.Element
           onChange={(e) => onChange({ rotationDeg: num(e.target.value) })}
         />
       </Field>
-      <label className="flex items-center gap-2 text-sm text-slate-600">
+      <label className="flex items-center gap-2 text-sm text-stone-600">
         <input
           type="checkbox"
           checked={seat.isActive}

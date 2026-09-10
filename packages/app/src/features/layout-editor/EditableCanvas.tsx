@@ -97,7 +97,7 @@ export function EditableCanvas({
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-slate-300"
+      className="relative overflow-hidden rounded-xl border border-stone-300"
       style={{
         width: width * scale,
         height: height * scale,
@@ -120,8 +120,8 @@ export function EditableCanvas({
               seat.shape === "ROUND" ? "rounded-full" : "rounded-lg",
               seat.kind === "DYNAMIC"
                 ? "border-dashed border-sky-500 bg-sky-50 text-sky-700"
-                : "border-slate-400 bg-white text-slate-600",
-              selected && "ring-2 ring-slate-900 ring-offset-2",
+                : "border-stone-400 bg-white text-stone-600",
+              selected && "ring-2 ring-stone-900 ring-offset-2",
               !seat.isActive && "opacity-40",
             )}
             style={{
@@ -139,13 +139,13 @@ export function EditableCanvas({
             {selected ? (
               <>
                 <span
-                  className="absolute -top-7 left-1/2 h-4 w-4 -translate-x-1/2 cursor-grab rounded-full border-2 border-slate-900 bg-white"
+                  className="absolute -top-7 left-1/2 h-4 w-4 -transtone-x-1/2 cursor-grab rounded-full border-2 border-stone-900 bg-white"
                   style={{ touchAction: "none" }}
                   onPointerDown={(e) => begin(e, seat, "rotate")}
                   title="rotate"
                 />
                 <span
-                  className="absolute -bottom-1.5 -right-1.5 h-3.5 w-3.5 cursor-se-resize rounded-sm border-2 border-slate-900 bg-white"
+                  className="absolute -bottom-1.5 -right-1.5 h-3.5 w-3.5 cursor-se-resize rounded-sm border-2 border-stone-900 bg-white"
                   style={{ touchAction: "none" }}
                   onPointerDown={(e) => begin(e, seat, "resize")}
                   title="resize"

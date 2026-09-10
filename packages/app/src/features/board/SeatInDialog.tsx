@@ -71,7 +71,7 @@ export function SeatInDialog({
         </>
       }
     >
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-stone-500">
         {t("seatIn.pickSeats", { n: selected.length, total: freeSeats.length })}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -83,23 +83,23 @@ export function SeatInDialog({
               "rounded-lg border px-3 py-2 text-sm font-medium",
               selected.includes(s.id)
                 ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50",
+                : "border-stone-300 bg-white text-stone-600 hover:bg-stone-50",
             )}
           >
             {seatLabel(s)}
           </button>
         ))}
-        {freeSeats.length === 0 ? <span className="text-sm text-slate-400">—</span> : null}
+        {freeSeats.length === 0 ? <span className="text-sm text-stone-400">—</span> : null}
       </div>
 
       {selected.length > 0 ? (
         <div className="space-y-2">
-          <span className="text-xs font-medium text-slate-500">{t("seatIn.names")}</span>
+          <span className="text-xs font-medium text-stone-500">{t("seatIn.names")}</span>
           {selected.map((id, i) => {
             const seat = room.seats.find((s) => s.id === id);
             return (
               <div key={id} className="flex items-center gap-2">
-                <span className="w-12 shrink-0 text-xs text-slate-400">{seat?.label}</span>
+                <span className="w-12 shrink-0 text-xs text-stone-400">{seat?.label}</span>
                 <Input
                   placeholder={`${t("seatIn.guest")} ${i + 1}`}
                   value={names[id] ?? ""}
@@ -111,7 +111,7 @@ export function SeatInDialog({
         </div>
       ) : null}
 
-      <label className="flex items-center gap-2 text-sm text-slate-600">
+      <label className="flex items-center gap-2 text-sm text-stone-600">
         <input type="checkbox" checked={separate} onChange={(e) => setSeparate(e.target.checked)} />
         {t("seatIn.separateTickets")}
       </label>

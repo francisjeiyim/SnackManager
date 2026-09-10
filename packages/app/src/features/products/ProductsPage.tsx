@@ -53,7 +53,7 @@ export function ProductsPage(): JSX.Element {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-800">{t("products.title")}</h1>
+        <h1 className="text-lg font-semibold text-stone-800">{t("products.title")}</h1>
         <Button size="sm" onClick={() => setDraft({ ...empty })}>
           {t("products.add")}
         </Button>
@@ -69,7 +69,7 @@ export function ProductsPage(): JSX.Element {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
-              <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+              <thead className="border-b border-stone-200 text-left text-xs uppercase text-stone-400">
                 <tr>
                   <th className="p-3">{t("products.name")}</th>
                   <th className="p-3">{t("products.category")}</th>
@@ -80,12 +80,12 @@ export function ProductsPage(): JSX.Element {
               </thead>
               <tbody>
                 {(productsQ.data ?? []).map((p) => (
-                  <tr key={p.id} className="border-b border-slate-100 last:border-0">
+                  <tr key={p.id} className="border-b border-stone-100 last:border-0">
                     <td className="p-3">
                       {p.emoji ? <span className="mr-1">{p.emoji}</span> : null}
                       {p.name}
                     </td>
-                    <td className="p-3 text-slate-500">{p.category ?? "—"}</td>
+                    <td className="p-3 text-stone-500">{p.category ?? "—"}</td>
                     <td className="p-3 text-right tabular-nums">{yen(p.priceYen, locale)}</td>
                     <td className="p-3">
                       {p.isActive ? <Badge tone="emerald">✓</Badge> : <Badge tone="slate">—</Badge>}
@@ -151,7 +151,7 @@ export function ProductsPage(): JSX.Element {
                 onChange={(e) => setDraft({ ...draft, emoji: e.target.value })}
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm text-slate-600 sm:mt-6">
+            <label className="flex items-center gap-2 text-sm text-stone-600 sm:mt-6">
               <input
                 type="checkbox"
                 checked={draft.isActive}

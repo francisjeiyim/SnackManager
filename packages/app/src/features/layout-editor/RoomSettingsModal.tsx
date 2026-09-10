@@ -67,7 +67,7 @@ export function RoomSettingsModal({ room, onClose, onSave, onDelete }: Props): J
       <Field label={t("layout.background")}>
         <input
           type="color"
-          className="h-10 w-full rounded-lg border border-slate-300"
+          className="h-10 w-full rounded-lg border border-stone-300"
           value={background}
           onChange={(e) => setBackground(e.target.value)}
         />

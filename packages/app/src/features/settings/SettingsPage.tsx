@@ -57,10 +57,10 @@ export function SettingsPage(): JSX.Element {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <h1 className="text-lg font-semibold text-slate-800">{t("settings.title")}</h1>
+      <h1 className="text-lg font-semibold text-stone-800">{t("settings.title")}</h1>
 
       <Card className="space-y-4 p-4">
-        <h2 className="text-sm font-semibold text-slate-700">{t("settings.deployment")}</h2>
+        <h2 className="text-sm font-semibold text-stone-700">{t("settings.deployment")}</h2>
         <Field label={t("settings.deployment")}>
           <Select
             value={local.mode}
@@ -71,7 +71,7 @@ export function SettingsPage(): JSX.Element {
           </Select>
         </Field>
         {local.mode === "autonomous" ? (
-          <p className="text-xs text-slate-500">{t("settings.autonomousHint")}</p>
+          <p className="text-xs text-stone-500">{t("settings.autonomousHint")}</p>
         ) : (
           <Field label={t("settings.apiUrl")}>
             <Input value={local.apiUrl} onChange={(e) => applyLocal({ apiUrl: e.target.value })} />
@@ -86,13 +86,13 @@ export function SettingsPage(): JSX.Element {
             <option value="en">English</option>
           </Select>
         </Field>
-        <p className="text-xs text-slate-400">{t("settings.reloadHint")}</p>
+        <p className="text-xs text-stone-400">{t("settings.reloadHint")}</p>
       </Card>
 
       {local.mode === "autonomous" ? <LocalDataCard /> : null}
 
       <Card className="space-y-4 p-4">
-        <h2 className="text-sm font-semibold text-slate-700">{t("settings.billing")}</h2>
+        <h2 className="text-sm font-semibold text-stone-700">{t("settings.billing")}</h2>
         {settingsQ.isLoading ? (
           <Spinner />
         ) : (
@@ -285,11 +285,11 @@ function LocalDataCard(): JSX.Element {
 
   return (
     <Card className="space-y-3 p-4">
-      <h2 className="text-sm font-semibold text-slate-700">{t("settings.localData")}</h2>
+      <h2 className="text-sm font-semibold text-stone-700">{t("settings.localData")}</h2>
       {kind === "memory" ? (
         <p className="text-xs text-amber-600">{t("settings.notPersistent")}</p>
       ) : kind === "kvvfs" ? (
-        <p className="text-xs text-slate-500">{t("settings.kvvfsNote")}</p>
+        <p className="text-xs text-stone-500">{t("settings.kvvfsNote")}</p>
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" disabled={busy} onClick={() => void exportDb()}>
@@ -324,7 +324,7 @@ function LocalDataCard(): JSX.Element {
           }}
         />
       </div>
-      <p className="text-xs text-slate-400">{t("settings.localDataHint")}</p>
+      <p className="text-xs text-stone-400">{t("settings.localDataHint")}</p>
     </Card>
   );
 }

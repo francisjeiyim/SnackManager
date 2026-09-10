@@ -11,16 +11,20 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-accent text-white hover:bg-accent-700 disabled:bg-accent-200 shadow-sm",
-  secondary: "bg-white text-stone-800 border border-stone-300 hover:bg-stone-50",
-  ghost: "bg-transparent text-stone-600 hover:bg-stone-100",
-  danger: "bg-rose-600 text-white hover:bg-rose-500 disabled:bg-rose-300",
-  success: "bg-emerald-600 text-white hover:bg-emerald-500 disabled:bg-emerald-300 shadow-sm",
+  primary:
+    "bg-accent text-white shadow-sm ring-1 ring-inset ring-white/15 hover:bg-accent-600 hover:shadow-md hover:-translate-y-px disabled:bg-accent-200 disabled:ring-0 disabled:shadow-none disabled:translate-y-0",
+  secondary:
+    "bg-white text-stone-700 border border-stone-300 shadow-sm hover:bg-stone-50 hover:border-stone-400 hover:-translate-y-px disabled:opacity-60",
+  ghost: "bg-transparent text-stone-600 hover:bg-stone-100 hover:text-stone-800",
+  danger:
+    "bg-rose-600 text-white shadow-sm ring-1 ring-inset ring-white/15 hover:bg-rose-500 hover:shadow-md hover:-translate-y-px disabled:bg-rose-300",
+  success:
+    "bg-emerald-600 text-white shadow-sm ring-1 ring-inset ring-white/15 hover:bg-emerald-500 hover:shadow-md hover:-translate-y-px disabled:bg-emerald-300",
 };
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-11 px-4 text-sm",
-  lg: "h-12 px-6 text-base",
+  sm: "h-9 px-3.5 text-sm",
+  md: "h-11 px-5 text-sm",
+  lg: "h-12 px-7 text-base",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -38,9 +42,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex select-none items-center justify-center gap-2 rounded-lg font-medium transition-all",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 active:scale-[0.98]",
-        "disabled:cursor-not-allowed disabled:active:scale-100",
+        "inline-flex select-none items-center justify-center gap-2 rounded-full font-semibold transition-all duration-150",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 active:scale-[0.97]",
+        "disabled:cursor-not-allowed disabled:active:scale-100 disabled:hover:translate-y-0",
         variants[variant],
         sizes[size],
         className,
@@ -63,8 +67,9 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 transition-colors",
-        "hover:bg-stone-100 hover:text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+        "inline-flex h-9 w-9 items-center justify-center rounded-full text-stone-500 transition-colors",
+        "hover:bg-stone-100 hover:text-stone-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25",
+        "active:scale-95",
         className,
       )}
       {...props}
@@ -80,7 +85,12 @@ export function Card({
   children: ReactNode;
 }): JSX.Element {
   return (
-    <div className={cn("rounded-xl border border-stone-200/80 bg-white shadow-card", className)}>
+    <div
+      className={cn(
+        "rounded-2xl border border-stone-200/70 bg-white shadow-card",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -88,7 +98,7 @@ export function Card({
 
 export function SectionTitle({ children }: { children: ReactNode }): JSX.Element {
   return (
-    <div className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+    <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-stone-400">
       {children}
     </div>
   );
@@ -100,8 +110,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       <input
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-lg border border-stone-300 bg-white px-3 text-sm outline-none",
-          "placeholder:text-stone-400 focus:border-accent focus:ring-2 focus:ring-accent/20",
+          "h-11 w-full rounded-xl border border-stone-300 bg-white px-3.5 text-sm text-stone-800 outline-none transition-shadow",
+          "placeholder:text-stone-400 focus:border-accent focus:ring-4 focus:ring-accent/15",
           className,
         )}
         {...props}
@@ -116,8 +126,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
       <select
         ref={ref}
         className={cn(
-          "h-11 w-full rounded-lg border border-stone-300 bg-white px-2.5 text-sm outline-none",
-          "focus:border-accent focus:ring-2 focus:ring-accent/20",
+          "h-11 w-full rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-800 outline-none transition-shadow",
+          "focus:border-accent focus:ring-4 focus:ring-accent/15",
           className,
         )}
         {...props}
@@ -138,8 +148,8 @@ export function Field({
   hint?: string;
 }): JSX.Element {
   return (
-    <label className="block space-y-1">
-      <span className="text-xs font-medium text-stone-500">{label}</span>
+    <label className="block space-y-1.5">
+      <span className="text-xs font-semibold text-stone-500">{label}</span>
       {children}
       {hint ? <span className="block text-xs text-stone-400">{hint}</span> : null}
     </label>
@@ -148,13 +158,13 @@ export function Field({
 
 type Tone = "slate" | "stone" | "accent" | "emerald" | "amber" | "rose" | "sky";
 const badgeTones: Record<Tone, string> = {
-  slate: "bg-stone-100 text-stone-600",
-  stone: "bg-stone-100 text-stone-600",
-  accent: "bg-accent-100 text-accent-700",
-  emerald: "bg-emerald-100 text-emerald-700",
-  amber: "bg-amber-100 text-amber-700",
-  rose: "bg-rose-100 text-rose-700",
-  sky: "bg-sky-100 text-sky-700",
+  slate: "bg-stone-100 text-stone-600 ring-stone-500/10",
+  stone: "bg-stone-100 text-stone-600 ring-stone-500/10",
+  accent: "bg-accent-100 text-accent-700 ring-accent-500/15",
+  emerald: "bg-emerald-100 text-emerald-700 ring-emerald-500/15",
+  amber: "bg-amber-100 text-amber-800 ring-amber-500/15",
+  rose: "bg-rose-100 text-rose-700 ring-rose-500/15",
+  sky: "bg-sky-100 text-sky-700 ring-sky-500/15",
 };
 const dotTones: Record<Tone, string> = {
   slate: "bg-stone-400",
@@ -178,7 +188,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset",
         badgeTones[tone],
       )}
     >
@@ -192,7 +202,7 @@ export function Spinner({ className }: { className?: string }): JSX.Element {
   return (
     <div
       className={cn(
-        "h-5 w-5 animate-spin rounded-full border-2 border-stone-300 border-t-stone-700",
+        "h-5 w-5 animate-spin rounded-full border-2 border-stone-300 border-t-accent",
         className,
       )}
     />
@@ -200,7 +210,7 @@ export function Spinner({ className }: { className?: string }): JSX.Element {
 }
 
 export function Skeleton({ className }: { className?: string }): JSX.Element {
-  return <div className={cn("animate-pulse rounded-md bg-stone-200/70", className)} />;
+  return <div className={cn("animate-pulse rounded-lg bg-stone-200/70", className)} />;
 }
 
 export function SegmentedControl<T extends string>({
@@ -215,14 +225,14 @@ export function SegmentedControl<T extends string>({
   size?: "sm" | "md";
 }): JSX.Element {
   return (
-    <div className="inline-flex rounded-lg border border-stone-200 bg-stone-100 p-0.5">
+    <div className="inline-flex rounded-full border border-stone-200 bg-stone-100 p-1">
       {options.map((o) => (
         <button
           key={o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-md font-medium transition-colors",
-            size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
+            "rounded-full font-semibold transition-all duration-150",
+            size === "sm" ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm",
             value === o.value
               ? "bg-white text-stone-900 shadow-sm"
               : "text-stone-500 hover:text-stone-800",
@@ -253,26 +263,28 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 backdrop-blur-[2px] sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/30 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
         className={cn(
           "flex max-h-[92vh] w-full flex-col overflow-hidden bg-white shadow-panel",
-          "animate-sheet-up rounded-t-2xl sm:animate-fade-in sm:rounded-2xl",
+          "animate-sheet-up rounded-t-3xl sm:animate-pop sm:rounded-3xl",
           wide ? "sm:max-w-2xl" : "sm:max-w-md",
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3">
-          <h2 className="text-base font-semibold text-stone-800">{title}</h2>
+        <div className="flex items-center justify-between border-b border-stone-100 px-5 py-3.5">
+          <h2 className="text-base font-bold text-stone-800">{title}</h2>
           <IconButton label="close" onClick={onClose}>
             ✕
           </IconButton>
         </div>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">{children}</div>
         {footer ? (
-          <div className="flex justify-end gap-2 border-t border-stone-100 px-5 py-3">{footer}</div>
+          <div className="flex flex-wrap justify-end gap-2 border-t border-stone-100 bg-stone-50/60 px-5 py-3.5">
+            {footer}
+          </div>
         ) : null}
       </div>
     </div>
@@ -291,11 +303,11 @@ export function EmptyState({
   action?: ReactNode;
 }): JSX.Element {
   return (
-    <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-stone-100 text-xl text-stone-400">
+    <div className="flex flex-col items-center gap-2.5 px-6 py-14 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-50 text-2xl text-accent-400">
         {icon}
       </div>
-      <div className="text-sm font-medium text-stone-700">{title}</div>
+      <div className="text-sm font-semibold text-stone-700">{title}</div>
       {hint ? <div className="max-w-xs text-xs text-stone-400">{hint}</div> : null}
       {action ? <div className="mt-1">{action}</div> : null}
     </div>

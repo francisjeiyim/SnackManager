@@ -19,11 +19,43 @@ html {
 
 body {
   margin: 0;
-  background: #fffaf5;
-  color: #1c1917;
+  color: #453e33;
+  letter-spacing: -0.006em;
   font-family:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN",
     "Noto Sans JP", Meiryo, sans-serif;
+  /* Warm sand ground with a soft light from the top. */
+  background-color: #faf6f0;
+  background-image:
+    radial-gradient(1200px 480px at 50% -10%, rgb(225 102 59 / 0.06), transparent 70%),
+    radial-gradient(900px 420px at 100% 0%, rgb(107 143 113 / 0.05), transparent 65%);
+  background-attachment: fixed;
+}
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Native controls pick up the warm accent (checkboxes, date pickers, ranges). */
+input,
+select,
+textarea,
+button {
+  accent-color: #e1663b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 /* Receipt printing: hide the app, show only #print-area on paper. */
@@ -32,9 +64,14 @@ body {
 }
 
 @media print {
+  body {
+    background: #fff;
+  }
+
   body > #root {
     display: none !important;
   }
+
   #print-area {
     display: block !important;
   }

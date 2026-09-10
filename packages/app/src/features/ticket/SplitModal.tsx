@@ -104,7 +104,7 @@ export function SplitModal({
             onClick={() => setMode(m)}
             className={cn(
               "rounded-lg border px-3 py-1.5 text-sm",
-              mode === m ? "border-slate-800 bg-slate-50" : "border-slate-200",
+              mode === m ? "border-stone-800 bg-stone-50" : "border-stone-200",
             )}
           >
             {t(`split.${m.toLowerCase()}`)}
@@ -114,19 +114,19 @@ export function SplitModal({
 
       {mode === "GROUPS" ? (
         <>
-          <p className="text-xs text-slate-500">{t("split.assignAll")}</p>
+          <p className="text-xs text-stone-500">{t("split.assignAll")}</p>
           <div className="space-y-1.5">
             {ticket.guests.map((g, i) => (
               <div
                 key={g.id}
-                className="flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm"
+                className="flex items-center justify-between rounded-lg bg-stone-50 px-2.5 py-1.5 text-sm"
               >
-                <span className="text-slate-700">
+                <span className="text-stone-700">
                   {g.displayName ?? `#${i + 1}`}
                   {g.seatLabel ? (
-                    <span className="ml-1 text-xs text-slate-400">· {g.seatLabel}</span>
+                    <span className="ml-1 text-xs text-stone-400">· {g.seatLabel}</span>
                   ) : null}
-                  <span className="ml-2 text-xs text-slate-400">{yen(chargeOf(g.id), locale)}</span>
+                  <span className="ml-2 text-xs text-stone-400">{yen(chargeOf(g.id), locale)}</span>
                 </span>
                 <div className="flex gap-1">
                   {Array.from({ length: groupCount }, (_, k) => (
@@ -136,8 +136,8 @@ export function SplitModal({
                       className={cn(
                         "h-7 w-7 rounded-md border text-xs font-semibold",
                         (groupOf[g.id] ?? 0) === k
-                          ? "border-slate-800 bg-slate-800 text-white"
-                          : "border-slate-300 text-slate-500",
+                          ? "border-stone-800 bg-stone-800 text-white"
+                          : "border-stone-300 text-stone-500",
                       )}
                     >
                       {k + 1}
@@ -163,8 +163,8 @@ export function SplitModal({
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {Array.from({ length: groupCount }, (_, k) => (
-              <div key={k} className="rounded-lg border border-slate-200 p-2 text-sm">
-                <div className="text-xs text-slate-400">
+              <div key={k} className="rounded-lg border border-stone-200 p-2 text-sm">
+                <div className="text-xs text-stone-400">
                   {t("split.group")} {k + 1} · {groups[k]?.length ?? 0}
                 </div>
                 <div className="font-semibold tabular-nums">{yen(groupSubtotal(k), locale)}</div>
@@ -183,8 +183,8 @@ export function SplitModal({
             />
           </Field>
           {shares ? (
-            <div className="rounded-lg bg-slate-50 p-3 text-sm">
-              <div className="mb-1 text-xs text-slate-500">{t("split.shares")}</div>
+            <div className="rounded-lg bg-stone-50 p-3 text-sm">
+              <div className="mb-1 text-xs text-stone-500">{t("split.shares")}</div>
               <div className="flex flex-wrap gap-2">
                 {shares.map((sh, i) => (
                   <span key={i} className="rounded bg-white px-2 py-1 font-medium">
@@ -198,7 +198,7 @@ export function SplitModal({
       ) : (
         <>
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-500">{t("split.moveGuests")}</div>
+            <div className="mb-1 text-xs font-medium text-stone-500">{t("split.moveGuests")}</div>
             <div className="flex flex-wrap gap-2">
               {ticket.guests.map((g, i) => (
                 <button
@@ -206,7 +206,7 @@ export function SplitModal({
                   onClick={() => setGuestIds((s) => toggle(s, g.id))}
                   className={cn(
                     "rounded-lg border px-2.5 py-1.5 text-sm",
-                    guestIds.includes(g.id) ? "border-slate-800 bg-slate-50" : "border-slate-200",
+                    guestIds.includes(g.id) ? "border-stone-800 bg-stone-50" : "border-stone-200",
                   )}
                 >
                   {g.displayName ?? `#${i + 1}`}
@@ -215,7 +215,7 @@ export function SplitModal({
             </div>
           </div>
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-500">{t("split.moveItems")}</div>
+            <div className="mb-1 text-xs font-medium text-stone-500">{t("split.moveItems")}</div>
             <div className="space-y-1">
               {ticket.items
                 .filter((it) => !it.voided)
@@ -225,13 +225,13 @@ export function SplitModal({
                     onClick={() => setItemIds((s) => toggle(s, it.id))}
                     className={cn(
                       "flex w-full justify-between rounded-lg border px-3 py-1.5 text-sm",
-                      itemIds.includes(it.id) ? "border-slate-800 bg-slate-50" : "border-slate-200",
+                      itemIds.includes(it.id) ? "border-stone-800 bg-stone-50" : "border-stone-200",
                     )}
                   >
                     <span>
                       {it.nameSnapshot} ×{it.quantity}
                     </span>
-                    <span className="text-slate-400">
+                    <span className="text-stone-400">
                       {yen(it.unitPriceYen * it.quantity, locale)}
                     </span>
                   </button>

@@ -33,14 +33,14 @@ export function InvoicesPage(): JSX.Element {
   });
 
   const dateInput =
-    "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-accent focus:outline-none";
+    "rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-700 focus:border-accent focus:outline-none";
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-lg font-semibold text-slate-800">{t("invoices.title")}</h1>
+        <h1 className="text-lg font-semibold text-stone-800">{t("invoices.title")}</h1>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-0.5 text-xs text-slate-400">
+          <label className="flex flex-col gap-0.5 text-xs text-stone-400">
             {t("invoices.from")}
             <input
               type="date"
@@ -50,7 +50,7 @@ export function InvoicesPage(): JSX.Element {
               onChange={(e) => setFrom(e.target.value)}
             />
           </label>
-          <label className="flex flex-col gap-0.5 text-xs text-slate-400">
+          <label className="flex flex-col gap-0.5 text-xs text-stone-400">
             {t("invoices.to")}
             <input
               type="date"
@@ -89,7 +89,7 @@ export function InvoicesPage(): JSX.Element {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
-              <thead className="border-b border-slate-200 text-left text-xs uppercase text-slate-400">
+              <thead className="border-b border-stone-200 text-left text-xs uppercase text-stone-400">
                 <tr>
                   <th className="p-3">{t("invoices.number")}</th>
                   <th className="p-3">{t("invoices.opened")}</th>
@@ -103,11 +103,11 @@ export function InvoicesPage(): JSX.Element {
                   <tr
                     key={tk.id}
                     onClick={() => setDetail(tk)}
-                    className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                    className="cursor-pointer border-b border-stone-100 last:border-0 hover:bg-stone-50"
                   >
                     <td className="p-3 font-medium">#{tk.number}</td>
-                    <td className="p-3 text-slate-500">{dateTime(tk.openedAt, locale)}</td>
-                    <td className="p-3 text-slate-500">
+                    <td className="p-3 text-stone-500">{dateTime(tk.openedAt, locale)}</td>
+                    <td className="p-3 text-stone-500">
                       {tk.closedAt ? dateTime(tk.closedAt, locale) : "—"}
                     </td>
                     <td className="p-3 text-right tabular-nums">{yen(tk.totalYen, locale)}</td>
@@ -137,19 +137,19 @@ export function InvoicesPage(): JSX.Element {
           <div className="space-y-3 text-sm">
             <div className="flex gap-2">
               <Badge tone={tone[detail.status]}>{t(`ticket.status.${detail.status}`)}</Badge>
-              <span className="text-slate-400">{dateTime(detail.openedAt, locale)}</span>
+              <span className="text-stone-400">{dateTime(detail.openedAt, locale)}</span>
             </div>
             <div>
-              <div className="mb-1 text-xs uppercase text-slate-400">{t("ticket.guests")}</div>
+              <div className="mb-1 text-xs uppercase text-stone-400">{t("ticket.guests")}</div>
               {detail.guests.map((g, i) => (
                 <div key={g.id} className="flex justify-between">
                   <span>
                     {g.displayName ?? `#${i + 1}`}
                     {g.seatLabel ? (
-                      <span className="ml-1 text-xs text-slate-400">· {g.seatLabel}</span>
+                      <span className="ml-1 text-xs text-stone-400">· {g.seatLabel}</span>
                     ) : null}
                   </span>
-                  <span className="tabular-nums text-slate-500">
+                  <span className="tabular-nums text-stone-500">
                     {(() => {
                       const sets = (g.timeChargeYen ?? 0) > 0 ? 1 : 0;
                       return `${
@@ -164,7 +164,7 @@ export function InvoicesPage(): JSX.Element {
               ))}
             </div>
             <div>
-              <div className="mb-1 text-xs uppercase text-slate-400">{t("ticket.items")}</div>
+              <div className="mb-1 text-xs uppercase text-stone-400">{t("ticket.items")}</div>
               {detail.items
                 .filter((it) => !it.voided)
                 .map((it) => (
@@ -172,19 +172,19 @@ export function InvoicesPage(): JSX.Element {
                     <span>
                       {it.nameSnapshot} ×{it.quantity}
                     </span>
-                    <span className="tabular-nums text-slate-500">
+                    <span className="tabular-nums text-stone-500">
                       {yen(it.unitPriceYen * it.quantity, locale)}
                     </span>
                   </div>
                 ))}
             </div>
-            <div className="space-y-1 border-t border-slate-200 pt-2">
+            <div className="space-y-1 border-t border-stone-200 pt-2">
               <div className="flex justify-between">
-                <span className="text-slate-500">{t("ticket.time")}</span>
+                <span className="text-stone-500">{t("ticket.time")}</span>
                 <span className="tabular-nums">{yen(detail.timeYen, locale)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">{t("ticket.products")}</span>
+                <span className="text-stone-500">{t("ticket.products")}</span>
                 <span className="tabular-nums">{yen(detail.productsYen, locale)}</span>
               </div>
               <div className="flex justify-between font-semibold">
@@ -192,7 +192,7 @@ export function InvoicesPage(): JSX.Element {
                 <span className="tabular-nums">{yen(detail.totalYen, locale)}</span>
               </div>
               {detail.payments.length > 0 ? (
-                <div className="pt-1 text-slate-500">
+                <div className="pt-1 text-stone-500">
                   {detail.payments.map((p) => (
                     <div key={p.id} className="flex justify-between">
                       <span>{t(`pay.methods.${p.method}`)}</span>

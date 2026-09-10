@@ -16,8 +16,8 @@ export default defineConfig({
         name: "SnackManager",
         short_name: "SnackManager",
         description: "Fast restaurant billing — time spent + products consumed.",
-        theme_color: "#0f172a",
-        background_color: "#0f172a",
+        theme_color: "#faf6f0",
+        background_color: "#faf6f0",
         display: "standalone",
         start_url: "/",
         icons: [

@@ -45,7 +45,7 @@ export function MergeModal({
         </>
       }
     >
-      <p className="text-sm text-slate-500">{t("merge.sources")}</p>
+      <p className="text-sm text-stone-500">{t("merge.sources")}</p>
       <div className="space-y-1.5">
         {candidates.map((tk) => (
           <button
@@ -54,17 +54,17 @@ export function MergeModal({
             className={cn(
               "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm",
               sources.includes(tk.id)
-                ? "border-slate-800 bg-slate-50"
-                : "border-slate-200 hover:bg-slate-50",
+                ? "border-stone-800 bg-stone-50"
+                : "border-stone-200 hover:bg-stone-50",
             )}
           >
             <span>#{tk.number}</span>
-            <span className="text-slate-400">
+            <span className="text-stone-400">
               {tk.guests.length} · {yen(tk.live.totalYen, locale)}
             </span>
           </button>
         ))}
-        {candidates.length === 0 ? <p className="text-sm text-slate-400">—</p> : null}
+        {candidates.length === 0 ? <p className="text-sm text-stone-400">—</p> : null}
       </div>
       {merge.isError ? (
         <p className="text-sm text-rose-600">{(merge.error as Error).message}</p>

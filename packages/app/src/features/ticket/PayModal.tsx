@@ -56,9 +56,9 @@ export function PayModal({
         </>
       }
     >
-      <div className="rounded-lg bg-slate-50 p-3 text-sm">
+      <div className="rounded-lg bg-stone-50 p-3 text-sm">
         <div className="flex justify-between">
-          <span className="text-slate-500">{t("ticket.balance")}</span>
+          <span className="text-stone-500">{t("ticket.balance")}</span>
           <span className="font-semibold">{yen(balanceYen, locale)}</span>
         </div>
       </div>
@@ -86,7 +86,7 @@ export function PayModal({
         </div>
       ) : null}
       {result ? (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-stone-500">
           {t("ticket.status." + result.status)} · {t("ticket.balance")}{" "}
           {yen(result.balanceYen, locale)}
         </p>

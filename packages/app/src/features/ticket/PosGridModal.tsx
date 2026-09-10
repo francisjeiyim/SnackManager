@@ -27,16 +27,16 @@ export function PosGridModal({
               key={p.id}
               disabled={addItem.isPending}
               onClick={() => addItem.mutate({ productId: p.id, quantity: 1 })}
-              className="flex flex-col items-center gap-1 rounded-lg border border-slate-200 bg-white p-2 text-center hover:border-slate-400 disabled:opacity-50"
+              className="flex flex-col items-center gap-1 rounded-lg border border-stone-200 bg-white p-2 text-center hover:border-stone-400 disabled:opacity-50"
             >
               <span className="text-xl">{p.emoji ?? "🍽️"}</span>
-              <span className="line-clamp-2 text-xs font-medium text-slate-700">{p.name}</span>
-              <span className="text-xs text-slate-400">{yen(p.priceYen, locale)}</span>
+              <span className="line-clamp-2 text-xs font-medium text-stone-700">{p.name}</span>
+              <span className="text-xs text-stone-400">{yen(p.priceYen, locale)}</span>
             </button>
           ))}
         </div>
       )}
-      <div className="flex justify-between text-sm text-slate-500">
+      <div className="flex justify-between text-sm text-stone-500">
         <span>{addItem.isPending ? t("common.loading") : ""}</span>
         <Button variant="secondary" onClick={onClose}>
           {t("common.close")}

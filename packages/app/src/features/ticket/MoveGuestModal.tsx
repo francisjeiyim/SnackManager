@@ -49,7 +49,7 @@ export function MoveGuestModal({ guest, onClose }: Props): JSX.Element {
                   onClick={() => pick(s.id)}
                   className={cn(
                     "min-w-[64px] rounded-lg border px-3 py-2 text-sm",
-                    isCurrent && "border-slate-900 bg-slate-100 text-slate-500",
+                    isCurrent && "border-stone-900 bg-stone-100 text-stone-500",
                     !isCurrent &&
                       occ &&
                       "border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100",

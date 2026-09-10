@@ -107,7 +107,7 @@ export function BoardPage(): JSX.Element {
     <div className="flex gap-4">
       <div className="min-w-0 flex-1 space-y-3">
         {/* summary bar */}
-        <Card className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2.5 text-sm">
+        <Card className="flex flex-wrap items-center gap-x-8 gap-y-3 px-5 py-3.5 text-sm">
           <Stat label={t("board.seatsInUse")} value={String(summary.seatsInUse)} />
           <Stat label={t("board.guestsCount")} value={String(summary.guests)} />
           <Stat label={t("board.running")} value={yen(summary.runningYen, locale)} />
@@ -286,9 +286,11 @@ export function BoardPage(): JSX.Element {
 
 function Stat({ label, value }: { label: string; value: string }): JSX.Element {
   return (
-    <span className="flex items-baseline gap-1.5">
-      <span className="text-xs text-stone-400">{label}</span>
-      <span className="font-semibold tabular-nums text-stone-800">{value}</span>
+    <span className="flex flex-col">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">
+        {label}
+      </span>
+      <span className="text-base font-bold tabular-nums text-stone-800">{value}</span>
     </span>
   );
 }
@@ -296,7 +298,7 @@ function Stat({ label, value }: { label: string; value: string }): JSX.Element {
 function LegendDot({ className, label }: { className: string; label: string }): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={cn("h-3 w-3 rounded border-[3px]", className)} />
+      <span className={cn("h-3 w-3 rounded-md border-[3px]", className)} />
       {label}
     </span>
   );
