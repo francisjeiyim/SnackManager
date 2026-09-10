@@ -127,6 +127,7 @@
     "assignedTo": "In charge: {{name}}",
     "unassign": "Remove staff",
     "overdue": "Time up (+{{n}} min)",
+    "nearEnd": "Paid time ends in {{n}} min",
     "extendSet": "+ Set",
     "extendHalf": "+ Half-set",
     "undoExtension": "Undo last extension",
@@ -199,6 +200,9 @@
     "status": "Status",
     "filterStatus": "Filter by status",
     "all": "All",
+    "from": "From",
+    "to": "To",
+    "clearDates": "Clear dates",
     "empty": "No tickets match",
     "detail": "Detail"
   },

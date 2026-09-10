@@ -79,6 +79,7 @@ export function TicketPanel({
 
   const ticket: TicketView = ticketQ.data;
   const settings = settingsQ.data as BillingSettings;
+  const leadMinutes = settingsQ.data.hourWarningMinutes ?? 0;
   const isOpen = ticket.status === "OPEN";
 
   const totals = isOpen
@@ -134,6 +135,12 @@ export function TicketPanel({
                 g.status === "CLOSED" && g.closedAt
                   ? elapsedMs(new Date(g.arrivalAt), new Date(g.closedAt))
                   : elapsedMs(new Date(g.arrivalAt), now);
+              const minsLeft = charge.paidUntilMinutes - ms / 60_000;
+              const overdue = charge.overdueMinutes > 0;
+              // Orange alert zone: paid time runs out within the pre-alert lead.
+              const nearEnd =
+                charge.sets > 0 && !overdue && leadMinutes > 0 && minsLeft <= leadMinutes;
+              const inAlertZone = isOpen && seated && (overdue || nearEnd);
               return (
                 <li key={g.id} className={cnRow(seated)}>
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-stone-200 text-xs font-semibold text-stone-600">
@@ -180,20 +187,38 @@ export function TicketPanel({
                         </button>
                       ) : null}
                     </div>
-                    {isOpen && seated && charge.overdueMinutes > 0 ? (
-                      <div className="mt-1 flex flex-wrap items-center gap-1 rounded bg-rose-100 px-1.5 py-1 text-[11px] font-semibold text-rose-700">
-                        <span>{t("ticket.overdue", { n: charge.overdueMinutes })}</span>
+                    {inAlertZone ? (
+                      <div
+                        className={`mt-1 flex flex-wrap items-center gap-1 rounded px-1.5 py-1 text-[11px] font-semibold ${
+                          overdue
+                            ? "bg-rose-100 text-rose-700"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        <span>
+                          {overdue
+                            ? t("ticket.overdue", { n: charge.overdueMinutes })
+                            : t("ticket.nearEnd", { n: Math.max(1, Math.ceil(minsLeft)) })}
+                        </span>
                         {perms.canServe ? (
                           <>
                             <button
-                              className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] text-white hover:bg-rose-700"
+                              className={`rounded px-1.5 py-0.5 text-[10px] text-white ${
+                                overdue
+                                  ? "bg-rose-600 hover:bg-rose-700"
+                                  : "bg-amber-600 hover:bg-amber-700"
+                              }`}
                               disabled={extendGuest.isPending}
                               onClick={() => extendGuest.mutate({ guestId: g.id, kind: "SET" })}
                             >
                               {t("ticket.extendSet")}
                             </button>
                             <button
-                              className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] text-white hover:bg-rose-700"
+                              className={`rounded px-1.5 py-0.5 text-[10px] text-white ${
+                                overdue
+                                  ? "bg-rose-600 hover:bg-rose-700"
+                                  : "bg-amber-600 hover:bg-amber-700"
+                              }`}
                               disabled={extendGuest.isPending}
                               onClick={() => extendGuest.mutate({ guestId: g.id, kind: "HALF" })}
                             >

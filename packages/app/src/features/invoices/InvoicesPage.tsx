@@ -15,21 +15,53 @@ export function InvoicesPage(): JSX.Element {
   const { t } = useTranslation();
   const locale = storedLocale();
   const [status, setStatus] = useState("");
-  const historyQ = useTicketHistory(status || undefined);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const historyQ = useTicketHistory(status || undefined, from || undefined, to || undefined);
   const [detail, setDetail] = useState<TicketView | null>(null);
+
+  const dateInput =
+    "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-accent focus:outline-none";
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-lg font-semibold text-slate-800">{t("invoices.title")}</h1>
-        <div className="w-48">
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s ? t(`ticket.status.${s}`) : t("invoices.all")}
-              </option>
-            ))}
-          </Select>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-0.5 text-xs text-slate-400">
+            {t("invoices.from")}
+            <input
+              type="date"
+              className={dateInput}
+              value={from}
+              max={to || undefined}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-0.5 text-xs text-slate-400">
+            {t("invoices.to")}
+            <input
+              type="date"
+              className={dateInput}
+              value={to}
+              min={from || undefined}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </label>
+          {from || to ? (
+            <Button variant="ghost" size="sm" onClick={() => { setFrom(""); setTo(""); }}>
+              {t("invoices.clearDates")}
+            </Button>
+          ) : null}
+          <div className="w-40">
+            <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s ? t(`ticket.status.${s}`) : t("invoices.all")}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       </div>
 

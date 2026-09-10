@@ -127,6 +127,7 @@
     "assignedTo": "担当: {{name}}",
     "unassign": "担当を外す",
     "overdue": "時間超過 (+{{n}}分)",
+    "nearEnd": "支払済み時間 残り{{n}}分",
     "extendSet": "＋セット",
     "extendHalf": "＋ハーフ",
     "undoExtension": "直前の延長を取消",
@@ -204,6 +205,9 @@
     "status": "状態",
     "filterStatus": "状態で絞り込み",
     "all": "すべて",
+    "from": "開始日",
+    "to": "終了日",
+    "clearDates": "日付をクリア",
     "empty": "該当する伝票がありません",
     "detail": "詳細"
   },
