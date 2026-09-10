@@ -31,7 +31,12 @@ export function useSetAlerts(
       return;
     }
     const nowMs = now.getTime();
-    const repeatMs = repeatSeconds > 0 ? repeatSeconds * 1000 : Number.POSITIVE_INFINITY;
+    // One ring burst lasts ~2.5 s — keep at least a short gap between them so a
+    // low `soundRepeatSeconds` doesn't pile overlapping rings on top of each
+    // other (it should sound like a phone ringing, not a wall of noise).
+    const RING_FLOOR_MS = 3200;
+    const repeatMs =
+      repeatSeconds > 0 ? Math.max(repeatSeconds * 1000, RING_FLOOR_MS) : Number.POSITIVE_INFINITY;
     const live = new Set<string>();
 
     for (const [seatId, guests] of guestsBySeat) {
