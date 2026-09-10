@@ -10,6 +10,7 @@ import type {
   TicketItem,
   TicketTotals,
   AddItemInput,
+  ExtensionKind,
   MergeInput,
   PaymentInput,
   ProductInput,
@@ -110,7 +111,10 @@ export interface SnackRepository {
   seatIn(input: SeatInInput): Promise<SeatInResult>;
   moveGuest(guestId: string, toSeatId: string): Promise<Guest>;
   seatOutGuest(guestId: string): Promise<Guest>;
-  validateHalfSets(guestId: string, count?: number): Promise<Guest>;
+  /** Validate one time extension for a guest — a full set or a half-set. */
+  extendGuest(guestId: string, kind: ExtensionKind): Promise<Guest>;
+  /** Undo the guest's most recent validated extension. */
+  undoLastExtension(guestId: string): Promise<Guest>;
   renameGuest(guestId: string, displayName: string | null): Promise<Guest>;
   assignGuest(guestId: string, userId: string): Promise<Guest>;
   unassignGuest(guestId: string): Promise<Guest>;
@@ -128,7 +132,7 @@ export interface SnackRepository {
   patchTicket(id: string, body: TicketPatchInput): Promise<TicketView>;
   closeTicket(
     id: string,
-    opts?: { closedAt?: string; billConsumed?: boolean },
+    opts?: { closedAt?: string; overdueExtension?: "SET" | "HALF" | "NONE" },
   ): Promise<TicketView>;
   mergeTickets(input: MergeInput): Promise<TicketView>;
   splitTicket(id: string, body: SplitBody): Promise<SplitResult>;

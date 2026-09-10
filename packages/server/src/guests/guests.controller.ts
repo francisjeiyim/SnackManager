@@ -3,10 +3,10 @@ import {
   schemas,
   UserRole,
   type AssignGuestInput,
+  type ExtendGuestInput,
   type GuestPatchInput,
   type MoveGuestInput,
   type SeatInInput,
-  type ValidateHalfSetsInput,
 } from "@snackmanager/shared";
 import { ZodBody } from "../common/zod-validation.pipe";
 import { CurrentUser, Roles, type AuthUser } from "../common/decorators";
@@ -50,13 +50,18 @@ export class GuestsController {
     return this.guests.seatOut(id, user?.id);
   }
 
-  @Post(":id/validate-halfsets")
-  validateHalfSets(
+  @Post(":id/extend")
+  extend(
     @Param("id") id: string,
-    @Body(new ZodBody(schemas.validateHalfSetsSchema)) dto: ValidateHalfSetsInput,
+    @Body(new ZodBody(schemas.extendGuestSchema)) dto: ExtendGuestInput,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.guests.validateHalfSets(id, user?.id, dto.count);
+    return this.guests.extendGuest(id, dto.kind, user?.id);
+  }
+
+  @Delete(":id/extension")
+  undoExtension(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.guests.undoLastExtension(id, user?.id);
   }
 
   @Patch(":id")

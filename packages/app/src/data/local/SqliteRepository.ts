@@ -9,6 +9,7 @@ import {
   BillingError,
   type AddItemInput,
   type BillingSettings,
+  type ExtensionKind,
   type MergeInput,
   type PaymentInput,
   type ProductInput,
@@ -51,15 +52,28 @@ const uuid = (): string => crypto.randomUUID();
 const nowIso = (): string => new Date().toISOString();
 const CHANNEL = "snackmanager-service";
 
-/** Guest columns + the seat label and the active staff assignment (all derived). */
+/** Guest columns + the seat label, the active staff assignment and the
+ * validated-extension aggregates (all derived). */
 const GUEST_SELECT = `SELECT g.*, s."label" AS "seatLabel",
     a."id" AS "assignmentId", a."userId" AS "assignmentUserId",
     a."assignedAt" AS "assignmentAssignedAt",
-    COALESCE(NULLIF(TRIM(u."displayName"), ''), u."username") AS "assignmentStaffName"
+    COALESCE(NULLIF(TRIM(u."displayName"), ''), u."username") AS "assignmentStaffName",
+    COALESCE(x."extMinutes", 0) AS "extensionMinutes",
+    COALESCE(x."extYen", 0) AS "extensionYen",
+    COALESCE(x."extSets", 0) AS "extensionSets",
+    COALESCE(x."extHalfSets", 0) AS "extensionHalfSets"
   FROM "Guest" g
   LEFT JOIN "Seat" s ON s."id" = g."seatId"
   LEFT JOIN "GuestAssignment" a ON a."guestId" = g."id" AND a."endedAt" IS NULL
-  LEFT JOIN "User" u ON u."id" = a."userId"`;
+  LEFT JOIN "User" u ON u."id" = a."userId"
+  LEFT JOIN (
+    SELECT "guestId",
+      SUM("minutes") AS "extMinutes",
+      SUM("priceYen") AS "extYen",
+      SUM(CASE WHEN "kind" = 'SET' THEN 1 ELSE 0 END) AS "extSets",
+      SUM(CASE WHEN "kind" = 'HALF' THEN 1 ELSE 0 END) AS "extHalfSets"
+    FROM "GuestExtension" GROUP BY "guestId"
+  ) x ON x."guestId" = g."id"`;
 
 async function sha256(text: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -499,12 +513,16 @@ export class SqliteRepository implements SnackRepository {
     const guest = toGuest(row);
     if (guest.status !== "SEATED") throw new BillingError("guest already closed", "GUEST_CLOSED");
     const at = nowIso();
-    const base = { ...guest, closedAt: null };
-    const consumed = computeGuestCharge(base, settings, at).consumedHalfSets;
-    const charge = computeGuestCharge({ ...base, validatedHalfSets: consumed }, settings, at);
+    // seat-out finalises this guest → bill the first set + every validated block
+    const fullRow = db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]);
+    const charge = computeGuestCharge(
+      { ...toGuest(fullRow ?? {}), closedAt: null },
+      settings,
+      at,
+    );
     db.run(
-      `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"validatedHalfSets"=?,"updatedAt"=? WHERE "id"=?`,
-      [at, charge.billedMinutes, charge.timeChargeYen, consumed, at, guestId],
+      `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"updatedAt"=? WHERE "id"=?`,
+      [at, charge.billedMinutes, charge.timeChargeYen, at, guestId],
     );
     db.run(
       `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='GUEST_LEFT' WHERE "guestId"=? AND "endedAt" IS NULL`,
@@ -517,21 +535,49 @@ export class SqliteRepository implements SnackRepository {
     return updated;
   }
 
-  async validateHalfSets(guestId: string, count?: number) {
+  async extendGuest(guestId: string, kind: ExtensionKind) {
     const db = await this.ready;
     const settings = await this.settings();
-    const row = db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]);
+    const row = db.get(`SELECT * FROM "Guest" WHERE "id"=?`, [guestId]);
     if (!row) throw new BillingError("guest not found", "NOT_FOUND");
     const guest = toGuest(row);
     if (guest.status !== "SEATED") throw new BillingError("guest not seated", "GUEST_CLOSED");
-    const consumed = computeGuestCharge({ ...guest, closedAt: null }, settings, nowIso())
-      .consumedHalfSets;
-    const validated = Math.max(0, Math.min(count ?? consumed, consumed));
-    db.run(`UPDATE "Guest" SET "validatedHalfSets"=?,"updatedAt"=? WHERE "id"=?`, [
-      validated,
-      nowIso(),
-      guestId,
-    ]);
+
+    const setMinutes = guest.setMinutesSnapshot || settings.setMinutes;
+    const minutes = kind === "SET" ? setMinutes : Math.round(setMinutes / 2);
+    const priceYen =
+      kind === "SET"
+        ? guest.setPriceYenSnapshot || settings.setPriceYen
+        : guest.halfSetPriceYenSnapshot || settings.halfSetPriceYen;
+
+    const at = nowIso();
+    db.run(
+      `INSERT INTO "GuestExtension" ("id","guestId","kind","minutes","priceYen","validatedAt","validatedByUserId")
+       VALUES (?,?,?,?,?,?,?)`,
+      [uuid(), guestId, kind, minutes, priceYen, at, null],
+    );
+    if (guest.ticketId) this.recompute(db, guest.ticketId, settings);
+    const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
+    this.emit("seat.updated", updated);
+    if (guest.ticketId) this.emit("ticket.updated", this.present(db, guest.ticketId, settings));
+    return updated;
+  }
+
+  async undoLastExtension(guestId: string) {
+    const db = await this.ready;
+    const settings = await this.settings();
+    const row = db.get(`SELECT * FROM "Guest" WHERE "id"=?`, [guestId]);
+    if (!row) throw new BillingError("guest not found", "NOT_FOUND");
+    const guest = toGuest(row);
+    if (guest.status !== "SEATED") throw new BillingError("guest not seated", "GUEST_CLOSED");
+
+    const last = db.get<{ id: string }>(
+      `SELECT "id" FROM "GuestExtension" WHERE "guestId"=? ORDER BY "validatedAt" DESC LIMIT 1`,
+      [guestId],
+    );
+    if (!last) throw new BillingError("no extension to undo", "NOT_FOUND");
+    db.run(`DELETE FROM "GuestExtension" WHERE "id"=?`, [last.id]);
+
     if (guest.ticketId) this.recompute(db, guest.ticketId, settings);
     const updated = toGuest(db.get(`${GUEST_SELECT} WHERE g."id"=?`, [guestId]) ?? {});
     this.emit("seat.updated", updated);
@@ -727,18 +773,37 @@ export class SqliteRepository implements SnackRepository {
     return view;
   }
 
-  async closeTicket(id: string, opts: { closedAt?: string; billConsumed?: boolean } = {}) {
+  async closeTicket(
+    id: string,
+    opts: { closedAt?: string; overdueExtension?: "SET" | "HALF" | "NONE" } = {},
+  ) {
     const db = await this.ready;
     const settings = await this.settings();
     const at = opts.closedAt ?? nowIso();
     db.tx(() => {
       const plan = planClose(this.bundle(db, id), settings, at, {
-        billConsumed: opts.billConsumed ?? true,
+        overdueExtension: opts.overdueExtension ?? "NONE",
       });
       for (const g of plan.guests) {
+        // Persist the covering extension block (if any) before freezing totals.
+        if (g.appendExtension) {
+          db.run(
+            `INSERT INTO "GuestExtension" ("id","guestId","kind","minutes","priceYen","validatedAt","validatedByUserId")
+             VALUES (?,?,?,?,?,?,?)`,
+            [
+              uuid(),
+              g.guestId,
+              g.appendExtension.kind,
+              g.appendExtension.minutes,
+              g.appendExtension.priceYen,
+              nowIso(),
+              null,
+            ],
+          );
+        }
         db.run(
-          `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"validatedHalfSets"=?,"updatedAt"=? WHERE "id"=?`,
-          [g.closedAt, g.billedMinutes, g.timeChargeYen, g.validatedHalfSets, nowIso(), g.guestId],
+          `UPDATE "Guest" SET "status"='CLOSED',"closedAt"=?,"billedMinutes"=?,"timeChargeYen"=?,"updatedAt"=? WHERE "id"=?`,
+          [g.closedAt, g.billedMinutes, g.timeChargeYen, nowIso(), g.guestId],
         );
         db.run(
           `UPDATE "GuestAssignment" SET "endedAt"=?,"endedReason"='GUEST_LEFT' WHERE "guestId"=? AND "endedAt" IS NULL`,

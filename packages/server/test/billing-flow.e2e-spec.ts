@@ -71,7 +71,7 @@ describe("SnackManager billing flow (e2e)", () => {
     expect(closed.body.guests.every((g: { status: string }) => g.status === "CLOSED")).toBe(true);
   });
 
-  it("bills in sets and half-sets, with a grace window", async () => {
+  it("charges only the first set until an extension is validated, with a grace window", async () => {
     const { seats } = ctx.seed;
 
     // within the 5-min grace window → nothing
@@ -79,14 +79,14 @@ describe("SnackManager billing flow (e2e)", () => {
     const closedA = await close(a.tickets[0].id, at(3));
     expect(closedA.body.timeYen).toBe(0);
 
-    // 100 min → first full set (2000) + one half-set (1000)
+    // 100 min, nothing validated → still just the first full set (2000)
     const b = await seatIn([seats[3].id]);
     const closedB = await close(b.tickets[0].id, at(100));
-    expect(closedB.body.timeYen).toBe(3000);
-    expect(closedB.body.guests[0].timeChargeYen).toBe(3000);
+    expect(closedB.body.timeYen).toBe(2000);
+    expect(closedB.body.guests[0].timeChargeYen).toBe(2000);
   });
 
-  it("only bills an extension half-set once an operator validates it", async () => {
+  it("bills a typed extension block once an operator validates it, and can undo it", async () => {
     const { seats } = ctx.seed;
     const { tickets } = await seatIn([seats[0].id]);
     const one = await auth(
@@ -94,30 +94,46 @@ describe("SnackManager billing flow (e2e)", () => {
     ).expect(200);
     const guestId = one.body.guests[0].id as string;
 
-    // backdate the arrival so ~100 min have elapsed
+    // backdate the arrival so ~200 min have elapsed (well past one set)
     await ctx.prisma.guest.update({
       where: { id: guestId },
-      data: { arrivalAt: new Date(Date.now() - 100 * 60_000) },
+      data: { arrivalAt: new Date(Date.now() - 200 * 60_000) },
     });
 
-    // running total: first set only, the half-set is consumed but not validated
+    // running total: first set only; the guest is overdue but nothing extra bills
     let live = await auth(request(app.getHttpServer()).get("/api/tickets/live")).expect(200);
     expect(live.body[0].live.timeYen).toBe(2000);
+    expect(live.body[0].live.perGuest[0].overdueMinutes).toBeGreaterThan(0);
 
+    // validate a full-set extension → set + set
     await auth(
-      request(app.getHttpServer()).post(`/api/guests/${guestId}/validate-halfsets`).send({}),
+      request(app.getHttpServer()).post(`/api/guests/${guestId}/extend`).send({ kind: "SET" }),
     ).expect(201);
-
     live = await auth(request(app.getHttpServer()).get("/api/tickets/live")).expect(200);
-    expect(live.body[0].live.timeYen).toBe(3000);
+    expect(live.body[0].live.timeYen).toBe(4000);
 
-    // closing with billConsumed:false keeps it at the validated amount
+    // add a half-set on top → set + set + half-set
+    await auth(
+      request(app.getHttpServer()).post(`/api/guests/${guestId}/extend`).send({ kind: "HALF" }),
+    ).expect(201);
+    live = await auth(request(app.getHttpServer()).get("/api/tickets/live")).expect(200);
+    expect(live.body[0].live.timeYen).toBe(5000);
+
+    // undo the last (the half-set) → back to set + set
+    await auth(
+      request(app.getHttpServer()).delete(`/api/guests/${guestId}/extension`),
+    ).expect(200);
+    live = await auth(request(app.getHttpServer()).get("/api/tickets/live")).expect(200);
+    expect(live.body[0].live.timeYen).toBe(4000);
+
+    // close covering the remaining overdue time with a half-set → 5000, frozen
     const closed = await auth(
       request(app.getHttpServer())
         .post(`/api/tickets/${tickets[0].id}/close`)
-        .send({ billConsumed: false }),
+        .send({ overdueExtension: "HALF" }),
     ).expect(201);
-    expect(closed.body.timeYen).toBe(3000);
+    expect(closed.body.timeYen).toBe(5000);
+    expect(closed.body.guests[0].timeChargeYen).toBe(5000);
   });
 
   it("frees the seat once the ticket is closed", async () => {

@@ -18,12 +18,13 @@ import {
   useAssignableStaff,
   useAssignGuest,
   useCloseTicket,
+  useExtendGuest,
   useRenameGuest,
   useSeatOutGuest,
   useSettings,
   useTicket,
   useUnassignGuest,
-  useValidateHalfSets,
+  useUndoExtension,
   useVoidItem,
 } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
@@ -54,7 +55,8 @@ export function TicketPanel({
   const rename = useRenameGuest();
   const assign = useAssignGuest();
   const unassign = useUnassignGuest();
-  const validateHalfSets = useValidateHalfSets();
+  const extendGuest = useExtendGuest();
+  const undoExtension = useUndoExtension();
   const presentStaff = useAssignableStaff().data ?? [];
 
   const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split">(null);
@@ -84,17 +86,14 @@ export function TicketPanel({
     : ticket.live;
   const balance = ticket.totalYen - ticket.paidYen;
 
-  const pendingHalfSets = ticket.guests
+  const overdueMinutes = ticket.guests
     .filter((g) => g.status === "SEATED")
-    .reduce((a, g) => {
-      const c = computeGuestCharge(g, settings, now);
-      return a + Math.max(0, c.consumedHalfSets - c.halfSets);
-    }, 0);
+    .reduce((a, g) => a + computeGuestCharge(g, settings, now).overdueMinutes, 0);
 
-  const doClose = (billConsumed: boolean): void => {
+  const doClose = (overdueExtension: "SET" | "HALF" | "NONE"): void => {
     setConfirmClose(false);
     closeTicket.mutate(
-      { id: ticket.id, billConsumed },
+      { id: ticket.id, overdueExtension },
       { onSuccess: () => toastBus.success(t("ticket.closed")) },
     );
   };
@@ -159,27 +158,51 @@ export function TicketPanel({
                       <span>{duration(ms)}</span>
                       {charge.sets > 0 ? (
                         <span className="rounded bg-stone-100 px-1 font-medium text-stone-500">
-                          {setLabel(charge.sets, charge.halfSets, locale)}
+                          {setLabel(
+                            charge.sets,
+                            charge.extensionSets,
+                            charge.extensionHalfSets,
+                            locale,
+                          )}
                         </span>
                       ) : null}
                       <span className="font-medium text-stone-600">
                         {yen(charge.timeChargeYen, locale)}
                       </span>
-                      {isOpen && seated && charge.consumedHalfSets > charge.halfSets ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-rose-100 px-1 font-semibold text-rose-700">
-                          +{charge.consumedHalfSets - charge.halfSets} {t("ticket.pendingHalfSet")}
-                          {perms.canServe ? (
-                            <button
-                              className="rounded bg-rose-600 px-1 text-[10px] text-white hover:bg-rose-700"
-                              disabled={validateHalfSets.isPending}
-                              onClick={() => validateHalfSets.mutate({ guestId: g.id })}
-                            >
-                              {t("ticket.validateHalfSet")}
-                            </button>
-                          ) : null}
-                        </span>
+                      {isOpen && seated && perms.canServe && charge.extensionSets + charge.extensionHalfSets > 0 ? (
+                        <button
+                          className="rounded border border-stone-300 px-1 text-[10px] text-stone-500 hover:bg-stone-100"
+                          title={t("ticket.undoExtension")}
+                          disabled={undoExtension.isPending}
+                          onClick={() => undoExtension.mutate({ guestId: g.id })}
+                        >
+                          ↶
+                        </button>
                       ) : null}
                     </div>
+                    {isOpen && seated && charge.overdueMinutes > 0 ? (
+                      <div className="mt-1 flex flex-wrap items-center gap-1 rounded bg-rose-100 px-1.5 py-1 text-[11px] font-semibold text-rose-700">
+                        <span>{t("ticket.overdue", { n: charge.overdueMinutes })}</span>
+                        {perms.canServe ? (
+                          <>
+                            <button
+                              className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] text-white hover:bg-rose-700"
+                              disabled={extendGuest.isPending}
+                              onClick={() => extendGuest.mutate({ guestId: g.id, kind: "SET" })}
+                            >
+                              {t("ticket.extendSet")}
+                            </button>
+                            <button
+                              className="rounded bg-rose-600 px-1.5 py-0.5 text-[10px] text-white hover:bg-rose-700"
+                              disabled={extendGuest.isPending}
+                              onClick={() => extendGuest.mutate({ guestId: g.id, kind: "HALF" })}
+                            >
+                              {t("ticket.extendHalf")}
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
                     {isOpen && seated && perms.canServe ? (
                       <div className="mt-1 flex items-center gap-1">
                         {g.assignment ? (
@@ -332,7 +355,7 @@ export function TicketPanel({
                   size="sm"
                   className="min-w-[88px] flex-1"
                   loading={closeTicket.isPending}
-                  onClick={() => (pendingHalfSets > 0 ? setConfirmClose(true) : doClose(true))}
+                  onClick={() => (overdueMinutes > 0 ? setConfirmClose(true) : doClose("NONE"))}
                 >
                   {t("ticket.close")}
                 </Button>
@@ -399,21 +422,24 @@ export function TicketPanel({
       {confirmClose ? (
         <Modal
           open
-          title={t("ticket.closeTitle")}
+          title={t("ticket.closeOverdueTitle")}
           onClose={() => setConfirmClose(false)}
           footer={
             <>
-              <Button variant="secondary" onClick={() => doClose(false)}>
-                {t("ticket.closeValidatedOnly")}
+              <Button variant="secondary" onClick={() => doClose("NONE")}>
+                {t("ticket.closeNoAdd")}
               </Button>
-              <Button variant="success" onClick={() => doClose(true)}>
-                {t("ticket.closeBillAll")}
+              <Button variant="secondary" onClick={() => doClose("HALF")}>
+                {t("ticket.closeAddHalf")}
+              </Button>
+              <Button variant="success" onClick={() => doClose("SET")}>
+                {t("ticket.closeAddSet")}
               </Button>
             </>
           }
         >
           <p className="text-sm text-stone-600">
-            {t("ticket.closePending", { n: pendingHalfSets })}
+            {t("ticket.closeOverdueBody", { n: overdueMinutes })}
           </p>
         </Modal>
       ) : null}

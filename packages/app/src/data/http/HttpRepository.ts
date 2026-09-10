@@ -7,6 +7,7 @@ import type {
   Seat,
   Settings,
   AddItemInput,
+  ExtensionKind,
   MergeInput,
   PaymentInput,
   ProductInput,
@@ -118,8 +119,11 @@ export class HttpRepository implements SnackRepository {
   seatOutGuest(guestId: string): Promise<Guest> {
     return this.api.request("POST", `/guests/${guestId}/seat-out`);
   }
-  validateHalfSets(guestId: string, count?: number): Promise<Guest> {
-    return this.api.request("POST", `/guests/${guestId}/validate-halfsets`, { count });
+  extendGuest(guestId: string, kind: ExtensionKind): Promise<Guest> {
+    return this.api.request("POST", `/guests/${guestId}/extend`, { kind });
+  }
+  undoLastExtension(guestId: string): Promise<Guest> {
+    return this.api.request("DELETE", `/guests/${guestId}/extension`);
   }
   renameGuest(guestId: string, displayName: string | null): Promise<Guest> {
     return this.api.request("PATCH", `/guests/${guestId}`, { displayName });
@@ -153,7 +157,7 @@ export class HttpRepository implements SnackRepository {
   }
   closeTicket(
     id: string,
-    opts: { closedAt?: string; billConsumed?: boolean } = {},
+    opts: { closedAt?: string; overdueExtension?: "SET" | "HALF" | "NONE" } = {},
   ): Promise<TicketView> {
     return this.api.request("POST", `/tickets/${id}/close`, opts);
   }

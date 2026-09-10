@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AddItemInput,
+  ExtensionKind,
   MergeInput,
   PaymentInput,
   ProductInput,
@@ -183,18 +184,34 @@ export function useCloseTicket() {
   const repo = useRepository();
   const invalidate = useInvalidateService();
   return useMutation({
-    mutationFn: (vars: { id: string; closedAt?: string; billConsumed?: boolean }) =>
-      repo.closeTicket(vars.id, { closedAt: vars.closedAt, billConsumed: vars.billConsumed }),
+    mutationFn: (vars: {
+      id: string;
+      closedAt?: string;
+      overdueExtension?: "SET" | "HALF" | "NONE";
+    }) =>
+      repo.closeTicket(vars.id, {
+        closedAt: vars.closedAt,
+        overdueExtension: vars.overdueExtension,
+      }),
     onSuccess: invalidate,
   });
 }
 
-export function useValidateHalfSets() {
+export function useExtendGuest() {
   const repo = useRepository();
   const invalidate = useInvalidateService();
   return useMutation({
-    mutationFn: (vars: { guestId: string; count?: number }) =>
-      repo.validateHalfSets(vars.guestId, vars.count),
+    mutationFn: (vars: { guestId: string; kind: ExtensionKind }) =>
+      repo.extendGuest(vars.guestId, vars.kind),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUndoExtension() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (vars: { guestId: string }) => repo.undoLastExtension(vars.guestId),
     onSuccess: invalidate,
   });
 }

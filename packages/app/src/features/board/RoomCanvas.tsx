@@ -5,7 +5,7 @@ import { elapsedMs } from "@snackmanager/shared";
 import { cn } from "../../lib/cn";
 import { duration } from "../../lib/format";
 import { useNow } from "../../lib/useNow";
-import { currentSetWindow } from "../../lib/setAlerts";
+import { paidWindow } from "../../lib/setAlerts";
 import type { RoomWithSeats } from "../../data/repository";
 
 const OVERTIME_MIN = 120;
@@ -36,11 +36,6 @@ const stateStyles: Record<SeatState, { box: string; dot: string }> = {
   },
 };
 
-const consumedHalfSets = (mins: number, setMinutes: number, grace: number): number => {
-  if (mins <= grace || mins <= setMinutes) return 0;
-  return Math.ceil((mins - setMinutes) / (setMinutes / 2));
-};
-
 interface Props {
   room: RoomWithSeats;
   guestsBySeat: Map<string, Guest[]>;
@@ -64,7 +59,6 @@ export function RoomCanvas({
   guestsBySeat,
   containerWidth,
   setMinutes,
-  graceMinutes,
   leadMinutes,
   onSeatClick,
   arrangeMode = false,
@@ -144,17 +138,13 @@ export function RoomCanvas({
         const earliest = primary ? Date.parse(primary.arrivalAt) : 0;
         const mins = occupied ? elapsedMs(new Date(earliest), now) / 60_000 : 0;
         const overtime = mins >= OVERTIME_MIN;
-        const win = occupied ? currentSetWindow(mins, setMinutes) : null;
-        const pending =
-          primary && primary.validatedHalfSets != null
-            ? Math.max(
-                0,
-                consumedHalfSets(mins, setMinutes, graceMinutes) - primary.validatedHalfSets,
-              )
-            : 0;
-        const atBoundary = pending > 0;
+        const setMin = (primary && primary.setMinutesSnapshot) || setMinutes;
+        const { paidUntil, overdueMinutes } = primary
+          ? paidWindow(mins, setMin, primary.extensionMinutes ?? 0)
+          : { paidUntil: 0, overdueMinutes: 0 };
+        const atBoundary = overdueMinutes > 0;
         const nearBoundary =
-          !!win && leadMinutes > 0 && !atBoundary && win.nextAt - mins <= leadMinutes;
+          occupied && leadMinutes > 0 && !atBoundary && paidUntil - mins <= leadMinutes && paidUntil - mins >= 0;
         const state: SeatState = !occupied
           ? "free"
           : atBoundary
@@ -245,9 +235,9 @@ export function RoomCanvas({
                   style.dot,
                 )}
               />
-              {pending > 0 ? (
-                <span className="absolute -left-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                  ⚠{pending}
+              {overdueMinutes > 0 ? (
+                <span className="absolute -left-1.5 -top-1.5 flex h-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                  ⚠+{overdueMinutes}
                 </span>
               ) : null}
               <span className="px-1 leading-tight">{seat.label}</span>

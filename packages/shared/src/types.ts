@@ -2,6 +2,7 @@ import type {
   AssignmentEndReason,
   AuditAction,
   Currency,
+  ExtensionKind,
   GuestStatus,
   Locale,
   PaymentMethod,
@@ -111,8 +112,13 @@ export interface Guest {
   setMinutesSnapshot: number;
   setPriceYenSnapshot: Yen;
   halfSetPriceYenSnapshot: Yen;
-  /** Extension half-sets an operator has validated for billing. */
+  /** @deprecated — replaced by typed {@link GuestExtension} blocks. */
   validatedHalfSets: number;
+  /** Aggregates of the validated extension blocks (derived, not columns). */
+  extensionMinutes: number;
+  extensionYen: Yen;
+  extensionSets: number;
+  extensionHalfSets: number;
   /** Derived from the seat (not persisted on the guest). */
   seatLabel?: string | null;
   /** Active staff assignment, if any (derived, not persisted on the guest). */
@@ -230,16 +236,30 @@ export interface BillingSettings {
   timeRounding?: TimeRounding;
 }
 
+export interface GuestExtension {
+  id: string;
+  guestId: string;
+  kind: ExtensionKind;
+  minutes: number;
+  priceYen: Yen;
+  validatedAt: IsoDateTime;
+  validatedByUserId: string | null;
+}
+
 export interface GuestCharge {
   guestId: string;
   billedMinutes: number;
   timeChargeYen: Yen;
   /** 0 before the grace period elapses, 1 afterwards. */
   sets: number;
-  /** Extension half-sets actually billed (validated, capped at consumed). */
-  halfSets: number;
-  /** Extension half-sets elapsed by the clock (may exceed `halfSets`). */
-  consumedHalfSets: number;
+  /** Validated full-set extensions. */
+  extensionSets: number;
+  /** Validated half-set extensions. */
+  extensionHalfSets: number;
+  /** Minute-mark the paid time (set + validated extensions) runs out. */
+  paidUntilMinutes: number;
+  /** Minutes the guest has sat past their paid time (0 → nothing owed). */
+  overdueMinutes: number;
 }
 
 export interface TicketTotals {
@@ -307,8 +327,8 @@ export interface ClosePlan {
     closedAt: IsoDateTime;
     billedMinutes: number;
     timeChargeYen: Yen;
-    /** Half-sets to persist on the guest as validated at close. */
-    validatedHalfSets: number;
+    /** Extension block to create for this guest before freezing (overdue cover). */
+    appendExtension: { kind: ExtensionKind; minutes: number; priceYen: Yen } | null;
   }>;
   freeSeatIds: string[];
   totals: TicketTotals;

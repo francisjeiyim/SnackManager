@@ -43,14 +43,10 @@ export function Receipt({ ticket, locale, shopName = "SnackManager" }: Props): J
               {g.displayName ?? `#${i + 1}`}
               {g.seatLabel ? ` [${g.seatLabel}]` : ""} ·{" "}
               {(() => {
-                const c = g.timeChargeYen ?? 0;
-                const half = g.halfSetPriceYenSnapshot || 0;
-                const sets = c > 0 ? 1 : 0;
-                const halfSets =
-                  sets && half > 0
-                    ? Math.max(0, Math.round((c - (g.setPriceYenSnapshot || 0)) / half))
-                    : 0;
-                return sets ? `${setLabel(sets, halfSets, locale)} (${duration(ms)})` : duration(ms);
+                const sets = (g.timeChargeYen ?? 0) > 0 ? 1 : 0;
+                return sets
+                  ? `${setLabel(sets, g.extensionSets, g.extensionHalfSets, locale)} (${duration(ms)})`
+                  : duration(ms);
               })()}
             </span>
             <span>{yen(g.timeChargeYen ?? 0, locale)}</span>

@@ -1,6 +1,7 @@
 import type {
   Guest as PGuest,
   GuestAssignment as PGuestAssignment,
+  GuestExtension as PGuestExtension,
   Payment as PPayment,
   Product as PProduct,
   Room as PRoom,
@@ -13,8 +14,10 @@ import type {
 import type {
   AssignmentEndReason,
   BillingSettings,
+  ExtensionKind,
   Guest,
   GuestAssignment,
+  GuestExtension,
   Payment,
   Product,
   PublicUser,
@@ -101,13 +104,25 @@ type PAssignmentWithStaff = PGuestAssignment & {
 type PGuestWithSeat = PGuest & {
   seat?: { label: string } | null;
   assignments?: PAssignmentWithStaff[] | null;
+  extensions?: PGuestExtension[] | null;
 };
 
 const staffName = (u: PAssignmentWithStaff["user"]): string =>
   u?.displayName?.trim() || u?.username || "";
 
+export const toGuestExtension = (r: PGuestExtension): GuestExtension => ({
+  id: r.id,
+  guestId: r.guestId,
+  kind: r.kind as ExtensionKind,
+  minutes: r.minutes,
+  priceYen: r.priceYen,
+  validatedAt: iso(r.validatedAt),
+  validatedByUserId: r.validatedByUserId,
+});
+
 export const toGuest = (r: PGuestWithSeat): Guest => {
   const active = (r.assignments ?? []).find((a) => a.endedAt == null) ?? null;
+  const exts = r.extensions ?? [];
   return {
     id: r.id,
     seatId: r.seatId,
@@ -121,6 +136,10 @@ export const toGuest = (r: PGuestWithSeat): Guest => {
     setPriceYenSnapshot: r.setPriceYenSnapshot,
     halfSetPriceYenSnapshot: r.halfSetPriceYenSnapshot,
     validatedHalfSets: r.validatedHalfSets,
+    extensionMinutes: exts.reduce((s, e) => s + e.minutes, 0),
+    extensionYen: exts.reduce((s, e) => s + e.priceYen, 0),
+    extensionSets: exts.filter((e) => e.kind === "SET").length,
+    extensionHalfSets: exts.filter((e) => e.kind === "HALF").length,
     billedMinutes: r.billedMinutes,
     timeChargeYen: r.timeChargeYen,
     ticketId: r.ticketId,

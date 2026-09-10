@@ -21,14 +21,34 @@ export function duration(ms: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
 }
 
-/** "1 set + 2 half-sets" / 「1セット+2ハーフ」 — empty when nothing is billed. */
-export function setLabel(sets: number, halfSets: number, locale: string = "ja"): string {
-  if (!sets && !halfSets) return locale === "ja" ? "—" : "—";
+/**
+ * "1 set + 1 prolong. set + 2 prolong. demi-set" / 「1セット+1セット延長+2ハーフ延長」
+ * — a dash when nothing is billed. `extSets` / `extHalves` are the counts of
+ * validated full-set / half-set extension blocks.
+ */
+export function setLabel(
+  sets: number,
+  extSets: number,
+  extHalves: number,
+  locale: string = "ja",
+): string {
+  if (!sets && !extSets && !extHalves) return "—";
   if (locale === "ja") {
-    return `${sets}セット${halfSets ? `+${halfSets}ハーフ` : ""}`;
+    return [
+      sets ? `${sets}セット` : "",
+      extSets ? `${extSets}セット延長` : "",
+      extHalves ? `${extHalves}ハーフ延長` : "",
+    ]
+      .filter(Boolean)
+      .join("+");
   }
-  const s = `${sets} set${sets > 1 ? "s" : ""}`;
-  return halfSets ? `${s} + ${halfSets} half-set${halfSets > 1 ? "s" : ""}` : s;
+  return [
+    sets ? `${sets} set${sets > 1 ? "s" : ""}` : "",
+    extSets ? `${extSets} prolong. set${extSets > 1 ? "s" : ""}` : "",
+    extHalves ? `${extHalves} prolong. demi-set${extHalves > 1 ? "s" : ""}` : "",
+  ]
+    .filter(Boolean)
+    .join(" + ");
 }
 
 export function dateTime(iso: string, locale: string = "ja"): string {

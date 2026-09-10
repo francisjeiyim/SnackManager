@@ -7,34 +7,39 @@ export interface SetPricing {
   setMinutes: number;
   /** Price of the first full set. */
   setPriceYen: Yen;
-  /** Price of each extension half-set (`setMinutes / 2`). */
+  /** Price of a half-set extension (`setMinutes / 2`). */
   halfSetPriceYen: Yen;
   /** Below this many minutes of stay, nothing is charged. */
   graceMinutes: number;
-  /** Extension half-sets an operator has validated (default 0). */
-  validatedHalfSets?: number;
+  /** Total minutes covered by validated extension blocks. */
+  extensionMinutes?: number;
+  /** Total yen of validated extension blocks. */
+  extensionYen?: Yen;
+  extensionSets?: number;
+  extensionHalfSets?: number;
 }
 
 export interface SetCharge {
-  /** 0 while within the grace window, 1 once the first set applies. */
   sets: number;
-  /** Extension half-sets actually billed (validated, capped at consumed). */
-  halfSets: number;
-  /** Extension half-sets elapsed by the clock. */
-  consumedHalfSets: number;
+  extensionSets: number;
+  extensionHalfSets: number;
+  /** Minute-mark the paid time runs out (set + validated extensions). */
+  paidUntilMinutes: number;
+  /** Minutes sat past the paid time (0 → nothing owed). */
+  overdueMinutes: number;
   /** Whole elapsed minutes, for display. */
   billedMinutes: number;
   timeChargeYen: Yen;
 }
 
 /**
- * Time charge for one stay, billed in sets and half-sets:
+ * Time charge for one stay:
  *
  * - `elapsed <= graceMinutes` → nothing.
- * - Otherwise the **first set is always charged whole** (`setPriceYen`).
- * - Every started block of `setMinutes / 2` beyond the first set is *consumed*;
- *   but only the half-sets an operator has **validated** are billed
- *   (`validatedHalfSets`, capped at what has actually been consumed).
+ * - Otherwise the first set is charged whole (`setPriceYen`), plus every
+ *   extension block an operator has **validated** (a full set or a half-set).
+ * - Extensions the operator has not validated are *not* billed; the guest is
+ *   simply "overdue" by `elapsed - paidUntil` minutes.
  */
 export function computeSetCharge(
   arrivalAt: Instant,
@@ -42,28 +47,37 @@ export function computeSetCharge(
   pricing: SetPricing,
 ): SetCharge {
   assertInteger(pricing.setPriceYen, "setPriceYen");
-  assertInteger(pricing.halfSetPriceYen, "halfSetPriceYen");
 
   const elapsed = elapsedMinutesExact(arrivalAt, endAt);
   const grace = Math.max(0, pricing.graceMinutes);
+  const extMinutes = Math.max(0, pricing.extensionMinutes ?? 0);
+  const extYen = Math.max(0, pricing.extensionYen ?? 0);
+  const extSets = pricing.extensionSets ?? 0;
+  const extHalfSets = pricing.extensionHalfSets ?? 0;
+
   if (elapsed <= grace) {
-    return { sets: 0, halfSets: 0, consumedHalfSets: 0, billedMinutes: 0, timeChargeYen: 0 };
+    return {
+      sets: 0,
+      extensionSets: extSets,
+      extensionHalfSets: extHalfSets,
+      paidUntilMinutes: 0,
+      overdueMinutes: 0,
+      billedMinutes: 0,
+      timeChargeYen: 0,
+    };
   }
 
   const setMinutes = Math.max(1, pricing.setMinutes);
-  const half = setMinutes / 2;
-  const consumedHalfSets =
-    elapsed <= setMinutes ? 0 : Math.ceil((elapsed - setMinutes) / half);
-  const billedHalfSets = Math.max(
-    0,
-    Math.min(pricing.validatedHalfSets ?? 0, consumedHalfSets),
-  );
+  const paidUntilMinutes = setMinutes + extMinutes;
+  const billedMinutes = Math.ceil(elapsed);
 
   return {
     sets: 1,
-    halfSets: billedHalfSets,
-    consumedHalfSets,
-    billedMinutes: Math.ceil(elapsed),
-    timeChargeYen: pricing.setPriceYen + billedHalfSets * pricing.halfSetPriceYen,
+    extensionSets: extSets,
+    extensionHalfSets: extHalfSets,
+    paidUntilMinutes,
+    overdueMinutes: Math.max(0, billedMinutes - paidUntilMinutes),
+    billedMinutes,
+    timeChargeYen: pricing.setPriceYen + extYen,
   };
 }

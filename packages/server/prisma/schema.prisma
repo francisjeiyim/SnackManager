@@ -109,6 +109,7 @@ model User {
   auditLogs         AuditLog[]
   assignments       GuestAssignment[] @relation("AssignmentStaff")
   assignmentsMade   GuestAssignment[] @relation("AssignmentBy")
+  guestExtensions   GuestExtension[]
 }
 
 model RefreshToken {
@@ -180,6 +181,7 @@ model Guest {
   setPriceYenSnapshot      Int         @default(0)
   halfSetPriceYenSnapshot  Int         @default(0)
   validatedHalfSets        Int         @default(0)
+  extensions               GuestExtension[]
   billedMinutes            Int?
   timeChargeYen            Int?
   ticketId                 String?
@@ -211,6 +213,22 @@ model GuestAssignment {
   @@index([guestId])
   @@index([userId])
   @@index([endedAt])
+}
+
+// One validated time extension for a guest: a full set or a half-set.
+// Kept as history; the guest's charge is setPrice + sum(priceYen).
+model GuestExtension {
+  id                String   @id @default(uuid())
+  guestId           String
+  guest             Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  kind              String
+  minutes           Int
+  priceYen          Int
+  validatedAt       DateTime @default(now())
+  validatedByUserId String?
+  validatedBy       User?    @relation(fields: [validatedByUserId], references: [id])
+
+  @@index([guestId])
 }
 
 model Product {

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Guest } from "@snackmanager/shared";
 import { elapsedMs } from "@snackmanager/shared";
 import { playChime } from "../../lib/chime";
-import { currentSetWindow } from "../../lib/setAlerts";
+import { paidWindow } from "../../lib/setAlerts";
 
 interface Options {
   setMinutes: number;
@@ -13,21 +13,16 @@ interface Options {
   enabled: boolean;
 }
 
-const consumedHalfSets = (mins: number, setMinutes: number, grace: number): number => {
-  if (mins <= grace || mins <= setMinutes) return 0;
-  return Math.ceil((mins - setMinutes) / (setMinutes / 2));
-};
-
 /**
  * Rings the end-of-set alarm and keeps repeating it while a seat is in the
- * pre-alert window or has an extension half-set the operator has not validated
- * — until they validate it or the ticket is closed. All clients share the clock
- * and math, so the chimes land together.
+ * pre-alert window or has run past its paid time (first set + validated
+ * extensions) — until an operator validates another block or the ticket is
+ * closed. All clients share the clock and math, so the chimes land together.
  */
 export function useSetAlerts(
   guestsBySeat: Map<string, Guest[]>,
   now: Date,
-  { setMinutes, graceMinutes, leadMinutes, repeatSeconds, enabled }: Options,
+  { setMinutes, leadMinutes, repeatSeconds, enabled }: Options,
 ): void {
   const lastPlayed = useRef(new Map<string, number>());
 
@@ -46,19 +41,23 @@ export function useSetAlerts(
         Date.parse(a.arrivalAt) <= Date.parse(b.arrivalAt) ? a : b,
       );
       const mins = elapsedMs(new Date(primary.arrivalAt), now) / 60_000;
-      const win = currentSetWindow(mins, setMinutes);
-      const consumed = consumedHalfSets(mins, setMinutes, graceMinutes);
-      const pending = Math.max(0, consumed - (primary.validatedHalfSets ?? 0));
-      const inLead = leadMinutes > 0 && win.nextAt - mins <= leadMinutes && win.nextAt - mins >= 0;
+      const setMin = primary.setMinutesSnapshot || setMinutes;
+      const { paidUntil, overdueMinutes } = paidWindow(
+        mins,
+        setMin,
+        primary.extensionMinutes ?? 0,
+      );
+      const inLead =
+        leadMinutes > 0 && paidUntil - mins <= leadMinutes && paidUntil - mins >= 0;
 
-      const active = pending > 0 || inLead;
+      const active = overdueMinutes > 0 || inLead;
       if (!active) {
         lastPlayed.current.delete(seatId);
         continue;
       }
       const prev = lastPlayed.current.get(seatId);
       if (prev == null || nowMs - prev >= repeatMs) {
-        playChime(pending > 0 ? "hard" : "soft");
+        playChime(overdueMinutes > 0 ? "hard" : "soft");
         lastPlayed.current.set(seatId, nowMs);
       }
     }
@@ -66,5 +65,5 @@ export function useSetAlerts(
     for (const seatId of [...lastPlayed.current.keys()]) {
       if (!live.has(seatId)) lastPlayed.current.delete(seatId);
     }
-  }, [guestsBySeat, now, setMinutes, graceMinutes, leadMinutes, repeatSeconds, enabled]);
+  }, [guestsBySeat, now, setMinutes, leadMinutes, repeatSeconds, enabled]);
 }

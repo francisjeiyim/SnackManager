@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AuditAction,
+  ExtensionKind,
   ServiceEvent,
   computeGuestCharge,
   type MoveGuestInput,
@@ -21,6 +22,7 @@ const withSeat = {
       user: { select: { id: true, displayName: true, username: true } },
     },
   },
+  extensions: { orderBy: { validatedAt: "asc" } },
 } as const;
 
 @Injectable()
@@ -111,11 +113,10 @@ export class GuestsService {
       if (!guest) throw new NotFoundException("guest not found");
       if (guest.status !== "SEATED") throw new ConflictException("guest is already closed");
 
-      const base = { ...toGuest(guest), closedAt: null };
-      // seat-out finalises this guest → bill every half-set consumed
-      const consumed = computeGuestCharge(base, settings, now.toISOString()).consumedHalfSets;
+      const withExt = await tx.guest.findUnique({ where: { id: guestId }, include: withSeat });
+      // seat-out finalises this guest → bill the first set + every validated block
       const charge = computeGuestCharge(
-        { ...base, validatedHalfSets: consumed },
+        { ...toGuest(withExt!), closedAt: null },
         settings,
         now.toISOString(),
       );
@@ -126,7 +127,6 @@ export class GuestsService {
           closedAt: now,
           billedMinutes: charge.billedMinutes,
           timeChargeYen: charge.timeChargeYen,
-          validatedHalfSets: consumed,
         },
       });
       await tx.guestAssignment.updateMany({
@@ -230,29 +230,61 @@ export class GuestsService {
   }
 
   /**
-   * Validate the guest's elapsed extension half-sets so they count on the bill.
-   * `count` omitted → catch up to whatever the clock has consumed.
+   * Validate one time extension for a guest — a full set or a half-set. The
+   * block's minutes and price are frozen from the guest's seat-in snapshot (or
+   * the current Settings if the guest predates snapshots), and the block is
+   * kept as history. Nothing is billed for elapsed time until a block exists.
    */
-  async validateHalfSets(guestId: string, userId?: string, count?: number) {
+  async extendGuest(guestId: string, kind: ExtensionKind, userId?: string) {
     const settings = toBillingSettings(await this.settings.getRaw());
     const guest = await this.prisma.guest.findUnique({ where: { id: guestId } });
     if (!guest) throw new NotFoundException("guest not found");
     if (guest.status !== "SEATED") throw new ConflictException("guest is no longer seated");
 
-    const consumed = computeGuestCharge(
-      { ...toGuest(guest), closedAt: null },
-      settings,
-      new Date().toISOString(),
-    ).consumedHalfSets;
-    const validatedHalfSets = Math.max(0, Math.min(count ?? consumed, consumed));
+    const setMinutes = guest.setMinutesSnapshot || settings.setMinutes;
+    const minutes =
+      kind === ExtensionKind.SET ? setMinutes : Math.round(setMinutes / 2);
+    const priceYen =
+      kind === ExtensionKind.SET
+        ? guest.setPriceYenSnapshot || settings.setPriceYen
+        : guest.halfSetPriceYenSnapshot || settings.halfSetPriceYen;
 
-    await this.prisma.guest.update({ where: { id: guestId }, data: { validatedHalfSets } });
+    await this.prisma.guestExtension.create({
+      data: { guestId, kind, minutes, priceYen, validatedByUserId: userId ?? null },
+    });
     await this.audit.record({
-      action: AuditAction.HALFSET_VALIDATE,
+      action: AuditAction.EXTENSION_ADD,
       entityType: "guest",
       entityId: guestId,
       userId,
-      data: { validatedHalfSets, consumed },
+      data: { kind, minutes, priceYen },
+    });
+    if (guest.ticketId) {
+      await this.tickets.refreshTotals(guest.ticketId);
+      this.events.emitEvent(ServiceEvent.TICKET_UPDATED, await this.tickets.get(guest.ticketId));
+    }
+    return this.emitGuest(guestId);
+  }
+
+  /** Undo the guest's most recent validated extension (operator mis-click). */
+  async undoLastExtension(guestId: string, userId?: string) {
+    const guest = await this.prisma.guest.findUnique({ where: { id: guestId } });
+    if (!guest) throw new NotFoundException("guest not found");
+    if (guest.status !== "SEATED") throw new ConflictException("guest is no longer seated");
+
+    const last = await this.prisma.guestExtension.findFirst({
+      where: { guestId },
+      orderBy: { validatedAt: "desc" },
+    });
+    if (!last) throw new NotFoundException("no extension to undo");
+
+    await this.prisma.guestExtension.delete({ where: { id: last.id } });
+    await this.audit.record({
+      action: AuditAction.EXTENSION_UNDO,
+      entityType: "guest",
+      entityId: guestId,
+      userId,
+      data: { kind: last.kind, minutes: last.minutes, priceYen: last.priceYen },
     });
     if (guest.ticketId) {
       await this.tickets.refreshTotals(guest.ticketId);

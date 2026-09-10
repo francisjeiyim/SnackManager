@@ -47,6 +47,7 @@ const withGraph = {
         where: { endedAt: null },
         include: { user: { select: { id: true, displayName: true, username: true } } },
       },
+      extensions: { orderBy: { validatedAt: "asc" } },
     },
   },
   items: { orderBy: { addedAt: "asc" } },
@@ -319,7 +320,12 @@ export class TicketsService {
 
   // --- close ------------------------------------------------------
 
-  async close(id: string, closedAtIso?: string, userId?: string, billConsumed = true) {
+  async close(
+    id: string,
+    closedAtIso?: string,
+    userId?: string,
+    overdueExtension: "SET" | "HALF" | "NONE" = "NONE",
+  ) {
     const now = closedAtIso ? new Date(closedAtIso) : new Date();
     const settings = toBillingSettings(await this.settings.getRaw());
 
@@ -328,10 +334,22 @@ export class TicketsService {
       if (!ticket) throw new NotFoundException("ticket not found");
 
       const plan = planClose(toBundle(ticket, ticket.guests, ticket.items), settings, now, {
-        billConsumed,
+        overdueExtension,
       });
 
       for (const g of plan.guests) {
+        // Persist the covering extension block (if any) before freezing totals.
+        if (g.appendExtension) {
+          await tx.guestExtension.create({
+            data: {
+              guestId: g.guestId,
+              kind: g.appendExtension.kind,
+              minutes: g.appendExtension.minutes,
+              priceYen: g.appendExtension.priceYen,
+              validatedByUserId: userId ?? null,
+            },
+          });
+        }
         await tx.guest.update({
           where: { id: g.guestId },
           data: {
@@ -339,7 +357,6 @@ export class TicketsService {
             closedAt: new Date(g.closedAt),
             billedMinutes: g.billedMinutes,
             timeChargeYen: g.timeChargeYen,
-            validatedHalfSets: g.validatedHalfSets,
           },
         });
       }
@@ -582,7 +599,10 @@ export class TicketsService {
   private async recompute(tx: Tx, ticketId: string, now: Date): Promise<void> {
     const settings = await this.settings.billing();
     const ticket = await tx.ticket.findUniqueOrThrow({ where: { id: ticketId } });
-    const guests = await tx.guest.findMany({ where: { ticketId } });
+    const guests = await tx.guest.findMany({
+      where: { ticketId },
+      include: { extensions: { orderBy: { validatedAt: "asc" } } },
+    });
     const items = await tx.ticketItem.findMany({ where: { ticketId } });
     const totals = computeTicketTotals(toBundle(ticket, guests, items), settings, now);
     await tx.ticket.update({

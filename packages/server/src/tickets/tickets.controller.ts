@@ -40,7 +40,8 @@ const splitBody = z.discriminatedUnion("mode", [
 
 const closeBody = z.object({
   closedAt: z.string().datetime().optional(),
-  billConsumed: z.boolean().optional(),
+  /** For guests past their paid time: add a set / half-set, or bill as-is. */
+  overdueExtension: z.enum(["SET", "HALF", "NONE"]).optional(),
 });
 
 @Controller("tickets")
@@ -104,7 +105,7 @@ export class TicketsController {
     @Body(new ZodBody(closeBody)) dto: z.infer<typeof closeBody>,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.tickets.close(id, dto.closedAt, user?.id, dto.billConsumed ?? true);
+    return this.tickets.close(id, dto.closedAt, user?.id, dto.overdueExtension ?? "NONE");
   }
 
   @Roles(UserRole.CASHIER)

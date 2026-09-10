@@ -77,6 +77,13 @@ export const UserRole = {
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
+/** A validated time-extension block: a full set or a half-set. */
+export const ExtensionKind = {
+  SET: "SET",
+  HALF: "HALF",
+} as const;
+export type ExtensionKind = (typeof ExtensionKind)[keyof typeof ExtensionKind];
+
 /** Whether a staff member is currently on the floor. Set by an admin. */
 export const StaffPresence = {
   PRESENT: "PRESENT",
@@ -126,6 +133,8 @@ export const AuditAction = {
   STAFF_ASSIGN: "STAFF_ASSIGN",
   STAFF_UNASSIGN: "STAFF_UNASSIGN",
   HALFSET_VALIDATE: "HALFSET_VALIDATE",
+  EXTENSION_ADD: "EXTENSION_ADD",
+  EXTENSION_UNDO: "EXTENSION_UNDO",
   FLOOR_ARRANGE: "FLOOR_ARRANGE",
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];

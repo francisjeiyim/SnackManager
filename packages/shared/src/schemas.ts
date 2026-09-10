@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ExtensionKind,
   Locale,
   PaymentMethod,
   SeatKind,
@@ -164,16 +165,15 @@ export type SplitInputDto = z.infer<typeof splitSchema>;
 export const closeTicketSchema = z.object({
   ticketId: id,
   closedAt: z.string().datetime().optional(),
-  /** Bill every half-set consumed by the clock (default), or only the validated ones. */
-  billConsumed: z.boolean().optional(),
+  /** For guests past their paid time: add a set / half-set, or bill as-is. */
+  overdueExtension: z.enum(["SET", "HALF", "NONE"]).optional(),
 });
 export type CloseTicketInput = z.infer<typeof closeTicketSchema>;
 
-export const validateHalfSetsSchema = z.object({
-  /** Target validated count; omit to catch up to what has been consumed. */
-  count: z.number().int().min(0).optional(),
+export const extendGuestSchema = z.object({
+  kind: z.nativeEnum(ExtensionKind),
 });
-export type ValidateHalfSetsInput = z.infer<typeof validateHalfSetsSchema>;
+export type ExtendGuestInput = z.infer<typeof extendGuestSchema>;
 
 export const arrangeSeatsSchema = z.object({
   roomId: id,

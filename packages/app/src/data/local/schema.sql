@@ -115,6 +115,17 @@ CREATE TABLE IF NOT EXISTS "GuestAssignment" (
   "endedReason" TEXT
 );
 
+CREATE TABLE IF NOT EXISTS "GuestExtension" (
+  "id" TEXT PRIMARY KEY,
+  "guestId" TEXT NOT NULL REFERENCES "Guest"("id") ON DELETE CASCADE,
+  "kind" TEXT NOT NULL,
+  "minutes" INTEGER NOT NULL,
+  "priceYen" INTEGER NOT NULL,
+  "validatedAt" TEXT NOT NULL,
+  "validatedByUserId" TEXT REFERENCES "User"("id")
+);
+CREATE INDEX IF NOT EXISTS "GuestExtension_guestId_idx" ON "GuestExtension" ("guestId");
+
 CREATE TABLE IF NOT EXISTS "Product" (
   "id" TEXT PRIMARY KEY,
   "name" TEXT NOT NULL,

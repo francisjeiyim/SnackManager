@@ -11,14 +11,8 @@ export function computeTimeCharge(billedMinutes: number, ratePerMinuteYen: Yen):
 }
 
 /**
- * Time charge for one guest, billed in sets / half-sets.
- *
- * - A `CLOSED` guest with stored snapshots returns them verbatim (history is
- *   never recomputed).
- * - Otherwise the charge is computed against `guest.closedAt ?? now`, using the
- *   set pricing snapshotted on the guest at seat-in (falling back to the current
- *   Settings when a snapshot is missing / zero — e.g. guests seated before the
- *   set-billing migration).
+ * Time charge for one guest, billed as: first set + every validated
+ * set / half-set extension. A `CLOSED` guest returns its frozen snapshots.
  */
 export function computeGuestCharge(
   guest: Guest,
@@ -30,20 +24,15 @@ export function computeGuestCharge(
     guest.billedMinutes != null &&
     guest.timeChargeYen != null
   ) {
-    const setPrice = guest.setPriceYenSnapshot || settings.setPriceYen;
-    const halfPrice = guest.halfSetPriceYenSnapshot || settings.halfSetPriceYen;
-    const sets = guest.timeChargeYen > 0 ? 1 : 0;
-    const halfSets =
-      sets && halfPrice > 0
-        ? Math.max(0, Math.round((guest.timeChargeYen - setPrice) / halfPrice))
-        : 0;
     return {
       guestId: guest.id,
       billedMinutes: guest.billedMinutes,
       timeChargeYen: guest.timeChargeYen,
-      sets,
-      halfSets,
-      consumedHalfSets: halfSets,
+      sets: guest.timeChargeYen > 0 ? 1 : 0,
+      extensionSets: guest.extensionSets ?? 0,
+      extensionHalfSets: guest.extensionHalfSets ?? 0,
+      paidUntilMinutes: guest.billedMinutes,
+      overdueMinutes: 0,
     };
   }
 
@@ -53,7 +42,10 @@ export function computeGuestCharge(
     setPriceYen: guest.setPriceYenSnapshot || settings.setPriceYen,
     halfSetPriceYen: guest.halfSetPriceYenSnapshot || settings.halfSetPriceYen,
     graceMinutes: settings.graceMinutes,
-    validatedHalfSets: guest.validatedHalfSets ?? 0,
+    extensionMinutes: guest.extensionMinutes ?? 0,
+    extensionYen: guest.extensionYen ?? 0,
+    extensionSets: guest.extensionSets ?? 0,
+    extensionHalfSets: guest.extensionHalfSets ?? 0,
   });
 
   return {
@@ -61,7 +53,9 @@ export function computeGuestCharge(
     billedMinutes: charge.billedMinutes,
     timeChargeYen: charge.timeChargeYen,
     sets: charge.sets,
-    halfSets: charge.halfSets,
-    consumedHalfSets: charge.consumedHalfSets,
+    extensionSets: charge.extensionSets,
+    extensionHalfSets: charge.extensionHalfSets,
+    paidUntilMinutes: charge.paidUntilMinutes,
+    overdueMinutes: charge.overdueMinutes,
   };
 }
