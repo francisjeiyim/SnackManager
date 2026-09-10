@@ -42,22 +42,19 @@ export function useSetAlerts(
       );
       const mins = elapsedMs(new Date(primary.arrivalAt), now) / 60_000;
       const setMin = primary.setMinutesSnapshot || setMinutes;
-      const { paidUntil, overdueMinutes } = paidWindow(
-        mins,
-        setMin,
-        primary.extensionMinutes ?? 0,
-      );
-      const inLead =
-        leadMinutes > 0 && paidUntil - mins <= leadMinutes && paidUntil - mins >= 0;
+      const { paidUntil, reached } = paidWindow(mins, setMin, primary.extensionMinutes ?? 0);
+      const inLead = !reached && leadMinutes > 0 && paidUntil - mins <= leadMinutes;
 
-      const active = overdueMinutes > 0 || inLead;
+      // Once the paid time is reached the alarm keeps ringing until the guest is
+      // extended (paidUntil moves out) or the ticket is closed.
+      const active = reached || inLead;
       if (!active) {
         lastPlayed.current.delete(seatId);
         continue;
       }
       const prev = lastPlayed.current.get(seatId);
       if (prev == null || nowMs - prev >= repeatMs) {
-        playChime(overdueMinutes > 0 ? "hard" : "soft");
+        playChime(reached ? "hard" : "soft");
         lastPlayed.current.set(seatId, nowMs);
       }
     }

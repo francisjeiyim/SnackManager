@@ -47,6 +47,7 @@ enum TicketStatus {
   OPEN
   CLOSED
   PAID
+  UNPAID
   VOID
 }
 

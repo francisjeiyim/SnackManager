@@ -19,6 +19,7 @@
     "avgTicket": "客単価",
     "avgStay": "平均滞在",
     "seatsServed": "利用座席数",
+    "unpaid": "未払い",
     "byMethod": "支払方法別",
     "byDay": "日別",
     "date": "日付",
@@ -73,6 +74,7 @@
     "alert": "1時間接近",
     "nearBoundary": "支払済み時間 終了間近",
     "atBoundary": "支払済み時間 超過",
+    "unpaidSeat": "支払い待ち",
     "enableSound": "音を有効化",
     "rearrange": "配置変更",
     "arrangeHint": "席をドラッグ — この営業のみ",
@@ -136,10 +138,15 @@
     "closeAddSet": "＋セット延長",
     "closeAddHalf": "＋ハーフ延長",
     "closeNoAdd": "そのまま請求",
+    "markUnpaid": "未払い計上",
+    "markUnpaidConfirm": "この伝票を未払いとして計上し、席を解放しますか？ 後で客が戻れば支払いを受け付けられます。",
+    "unpaidBanner": "未払い — 残 {{amount}}",
+    "recordedUnpaid": "未払いとして計上済み",
     "status": {
       "OPEN": "オープン",
       "CLOSED": "クローズ",
       "PAID": "支払済",
+      "UNPAID": "未払い",
       "VOID": "無効"
     },
     "empty": "伝票を選択してください"

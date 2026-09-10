@@ -11,7 +11,7 @@ import type { RoomWithSeats } from "../../data/repository";
 const OVERTIME_MIN = 120;
 const GRID = 10;
 
-type SeatState = "free" | "occupied" | "overtime" | "near" | "alert";
+type SeatState = "free" | "occupied" | "overtime" | "near" | "alert" | "unpaid";
 
 const stateStyles: Record<SeatState, { box: string; dot: string }> = {
   free: {
@@ -21,6 +21,10 @@ const stateStyles: Record<SeatState, { box: string; dot: string }> = {
   occupied: {
     box: "border-emerald-500 bg-emerald-100 text-emerald-800 shadow-sm",
     dot: "bg-emerald-500",
+  },
+  unpaid: {
+    box: "border-sky-500 bg-sky-100 text-sky-800 ring-4 ring-sky-300/50 ring-offset-2 ring-offset-canvas shadow-sm",
+    dot: "bg-sky-500",
   },
   overtime: {
     box: "border-amber-500 bg-amber-100 text-amber-900 shadow-sm",
@@ -47,6 +51,8 @@ interface Props {
   graceMinutes: number;
   /** Minutes before a boundary the pre-alert marker shows (0 = off). */
   leadMinutes: number;
+  /** Free seats whose last ticket was closed without payment (seatId → ticket). */
+  unpaidBySeat?: Map<string, { ticketId: string; number: number; balanceYen: number }>;
   onSeatClick: (seatId: string, ticketId: string | null) => void;
   /** When true, seats are draggable and clicks don't open tickets. */
   arrangeMode?: boolean;
@@ -60,6 +66,7 @@ export function RoomCanvas({
   containerWidth,
   setMinutes,
   leadMinutes,
+  unpaidBySeat,
   onSeatClick,
   arrangeMode = false,
   arrangeDraft,
@@ -139,14 +146,19 @@ export function RoomCanvas({
         const mins = occupied ? elapsedMs(new Date(earliest), now) / 60_000 : 0;
         const overtime = mins >= OVERTIME_MIN;
         const setMin = (primary && primary.setMinutesSnapshot) || setMinutes;
-        const { paidUntil, overdueMinutes } = primary
+        const { paidUntil, overdueMinutes, reached } = primary
           ? paidWindow(mins, setMin, primary.extensionMinutes ?? 0)
-          : { paidUntil: 0, overdueMinutes: 0 };
-        const atBoundary = overdueMinutes > 0;
+          : { paidUntil: 0, overdueMinutes: 0, reached: false };
+        // Reached OR exceeded the paid time → red, and it stays red (see useSetAlerts)
+        // until the guest is extended or the ticket is closed.
+        const atBoundary = reached;
         const nearBoundary =
-          occupied && leadMinutes > 0 && !atBoundary && paidUntil - mins <= leadMinutes && paidUntil - mins >= 0;
+          occupied && leadMinutes > 0 && !atBoundary && paidUntil - mins <= leadMinutes;
+        const unpaidHere = !occupied ? unpaidBySeat?.get(seat.id) : undefined;
         const state: SeatState = !occupied
-          ? "free"
+          ? unpaidHere
+            ? "unpaid"
+            : "free"
           : atBoundary
             ? "alert"
             : nearBoundary
@@ -155,7 +167,7 @@ export function RoomCanvas({
                 ? "overtime"
                 : "occupied";
         const style = stateStyles[state];
-        const ticketId = guests[0]?.ticketId ?? null;
+        const ticketId = guests[0]?.ticketId ?? unpaidHere?.ticketId ?? null;
         const assignment = guests.find((g) => g.assignment)?.assignment ?? null;
         const names = guests.map((g) => g.displayName?.trim()).filter(Boolean) as string[];
         const guestLabel =
@@ -235,9 +247,14 @@ export function RoomCanvas({
                   style.dot,
                 )}
               />
-              {overdueMinutes > 0 ? (
+              {atBoundary ? (
                 <span className="absolute -left-1.5 -top-1.5 flex h-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
-                  ⚠+{overdueMinutes}
+                  {overdueMinutes > 0 ? `⚠+${overdueMinutes}` : "⚠"}
+                </span>
+              ) : null}
+              {unpaidHere ? (
+                <span className="absolute -left-1.5 -top-1.5 flex h-4 items-center justify-center rounded-full bg-sky-600 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+                  💰
                 </span>
               ) : null}
               <span className="px-1 leading-tight">{seat.label}</span>
@@ -252,6 +269,10 @@ export function RoomCanvas({
                     {duration(elapsedMs(new Date(earliest), now))}
                   </span>
                 </>
+              ) : unpaidHere ? (
+                <span className="text-[10px] font-bold tabular-nums">
+                  {t("board.unpaidSeat")}
+                </span>
               ) : (
                 <span className="text-[10px] font-medium">{t("board.free")}</span>
               )}

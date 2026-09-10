@@ -86,6 +86,22 @@ export class TicketsService {
     return tickets.map((t) => this.presentWith(t, settings));
   }
 
+  /** Closed tickets the customer never settled — still owed, seat already free. */
+  async listUnpaid() {
+    const [tickets, settings] = await Promise.all([
+      this.prisma.ticket.findMany({
+        where: { status: TicketStatus.CLOSED },
+        include: withGraph,
+        orderBy: { closedAt: "desc" },
+        take: 500,
+      }),
+      this.settings.billing(),
+    ]);
+    return tickets
+      .filter((t) => t.totalYen - t.paidYen > 0)
+      .map((t) => this.presentWith(t, settings));
+  }
+
   async list(params: { status?: string; serviceDay?: string; from?: string; to?: string }) {
     const range = params.from || params.to ? { gte: params.from, lte: params.to } : undefined;
     const [tickets, settings] = await Promise.all([
@@ -386,6 +402,34 @@ export class TicketsService {
       data: { totalYen: presented.totalYen },
     });
     this.events.emitEvent(ServiceEvent.GUEST_CLOSED, presented);
+    this.events.emitEvent(ServiceEvent.TICKET_UPDATED, presented);
+    return presented;
+  }
+
+  /**
+   * Write a closed-but-unpaid ticket off: the customer left without settling.
+   * The revenue stays on the books as a loss; the ticket leaves the "to
+   * collect" list. Payment is still accepted afterwards if they come back.
+   */
+  async writeOff(id: string, userId?: string) {
+    const ticket = await this.prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) throw new NotFoundException("ticket not found");
+    if (ticket.status !== TicketStatus.CLOSED) {
+      throw new ConflictException(`ticket ${ticket.status}, only a CLOSED ticket can be written off`);
+    }
+    if (ticket.totalYen - ticket.paidYen <= 0) {
+      throw new ConflictException("ticket is already settled");
+    }
+    await this.prisma.ticket.update({ where: { id }, data: { status: TicketStatus.UNPAID } });
+
+    const presented = await this.get(id);
+    await this.audit.record({
+      action: AuditAction.TICKET_WRITEOFF,
+      entityType: "ticket",
+      entityId: id,
+      userId,
+      data: { outstandingYen: ticket.totalYen - ticket.paidYen },
+    });
     this.events.emitEvent(ServiceEvent.TICKET_UPDATED, presented);
     return presented;
   }

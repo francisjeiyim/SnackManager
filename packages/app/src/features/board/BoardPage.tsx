@@ -17,6 +17,7 @@ import {
   useLiveTickets,
   useRooms,
   useSettings,
+  useUnpaidTickets,
 } from "../../data/queries";
 import { RoomCanvas } from "./RoomCanvas";
 import { SeatInDialog } from "./SeatInDialog";
@@ -33,6 +34,7 @@ export function BoardPage(): JSX.Element {
   const guestsQ = useActiveGuests();
   const settingsQ = useSettings();
   const liveQ = useLiveTickets();
+  const unpaidQ = useUnpaidTickets();
 
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [seatInSeatId, setSeatInSeatId] = useState<string | null | undefined>(undefined);
@@ -67,6 +69,20 @@ export function BoardPage(): JSX.Element {
   }, [guests]);
 
   const occupiedSeatIds = useMemo(() => new Set(guestsBySeat.keys()), [guestsBySeat]);
+
+  // Free seats whose most-recent ticket was closed without being paid.
+  const unpaidBySeat = useMemo(() => {
+    const map = new Map<string, { ticketId: string; number: number; balanceYen: number }>();
+    for (const tk of unpaidQ.data ?? []) {
+      const balanceYen = tk.totalYen - tk.paidYen;
+      if (balanceYen <= 0) continue;
+      for (const g of tk.guests) {
+        if (guestsBySeat.has(g.seatId) || map.has(g.seatId)) continue;
+        map.set(g.seatId, { ticketId: tk.id, number: tk.number, balanceYen });
+      }
+    }
+    return map;
+  }, [unpaidQ.data, guestsBySeat]);
 
   useSetAlerts(guestsBySeat, useNow(2000), {
     setMinutes: settingsQ.data?.setMinutes ?? 90,
@@ -220,6 +236,7 @@ export function BoardPage(): JSX.Element {
           <LegendDot className="border-emerald-500 bg-emerald-50" label={t("board.occupied")} />
           <LegendDot className="border-amber-500 bg-amber-100" label={t("board.nearBoundary")} />
           <LegendDot className="border-rose-500 bg-rose-100" label={t("board.atBoundary")} />
+          <LegendDot className="border-sky-500 bg-sky-100" label={t("board.unpaidSeat")} />
           <span className="inline-flex items-center gap-1.5">
             <span className="rounded-full bg-white px-1 text-[10px] font-semibold ring-1 ring-stone-300">
               ×N
@@ -241,6 +258,7 @@ export function BoardPage(): JSX.Element {
               setMinutes={settingsQ.data?.setMinutes ?? 90}
               graceMinutes={settingsQ.data?.graceMinutes ?? 0}
               leadMinutes={settingsQ.data?.hourWarningMinutes ?? 0}
+              unpaidBySeat={unpaidBySeat}
               arrangeMode={arrangeMode}
               arrangeDraft={arrangeDraft}
               onSeatMove={(seatId, x, y) =>

@@ -56,6 +56,10 @@ export function ReportsPage(): JSX.Element {
     const tickets = (rangeQ.data ?? []) as TicketView[];
     const paid = tickets.filter((tk) => tk.status === "PAID");
     const open = tickets.filter((tk) => tk.status === "OPEN").length;
+    const unpaidList = tickets.filter(
+      (tk) => (tk.status === "CLOSED" || tk.status === "UNPAID") && tk.totalYen - tk.paidYen > 0,
+    );
+    const unpaidYen = unpaidList.reduce((a, tk) => a + (tk.totalYen - tk.paidYen), 0);
 
     const sum = (f: (tk: TicketView) => number): number => paid.reduce((a, tk) => a + f(tk), 0);
     const revenueYen = sum((tk) => tk.totalYen);
@@ -104,6 +108,8 @@ export function ReportsPage(): JSX.Element {
     return {
       ticketCount: paid.length,
       openCount: open,
+      unpaidCount: unpaidList.length,
+      unpaidYen,
       revenueYen,
       timeYen,
       productsYen,
@@ -214,6 +220,13 @@ export function ReportsPage(): JSX.Element {
               label={t("reports.seatsServed")}
               value={`${data.seatsServed}${data.totalSeats ? ` / ${data.totalSeats}` : ""}`}
             />
+            {data.unpaidCount > 0 ? (
+              <Tile
+                label={`${t("reports.unpaid")} (${data.unpaidCount})`}
+                value={yen(data.unpaidYen, locale)}
+                danger
+              />
+            ) : null}
           </div>
 
           <Card className="p-4">
@@ -294,18 +307,26 @@ function Tile({
   label,
   value,
   accent,
+  danger,
 }: {
   label: string;
   value: string;
   accent?: boolean;
+  danger?: boolean;
 }): JSX.Element {
   return (
-    <Card className={cn("p-3", accent && "border-accent-200 bg-accent-50")}>
+    <Card
+      className={cn(
+        "p-3",
+        accent && "border-accent-200 bg-accent-50",
+        danger && "border-rose-200 bg-rose-50",
+      )}
+    >
       <div className="text-xs text-stone-400">{label}</div>
       <div
         className={cn(
           "mt-1 text-xl font-bold tabular-nums",
-          accent ? "text-accent-700" : "text-stone-800",
+          accent ? "text-accent-700" : danger ? "text-rose-700" : "text-stone-800",
         )}
       >
         {value}

@@ -4,21 +4,37 @@ import { Badge, Button, Card, EmptyState, Modal, Select, Skeleton } from "../../
 import { dateTime, setLabel, yen } from "../../lib/format";
 import { storedLocale } from "../../i18n";
 import { printReceipt } from "../../lib/printReceipt";
-import { useTicketHistory } from "../../data/queries";
+import { usePermissions } from "../../lib/permissions";
+import { toastBus } from "../../lib/toastBus";
+import { useTicketHistory, useWriteOffTicket } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
+import { PayModal } from "../ticket/PayModal";
 
-const STATUSES = ["", "OPEN", "CLOSED", "PAID", "VOID"] as const;
+const STATUSES = ["", "OPEN", "CLOSED", "PAID", "UNPAID", "VOID"] as const;
 
-const tone = { OPEN: "emerald", CLOSED: "amber", PAID: "sky", VOID: "rose" } as const;
+const tone = {
+  OPEN: "emerald",
+  CLOSED: "amber",
+  PAID: "sky",
+  UNPAID: "rose",
+  VOID: "stone",
+} as const;
+
+const balanceOf = (tk: TicketView): number => tk.totalYen - tk.paidYen;
+const owes = (tk: TicketView): boolean =>
+  (tk.status === "CLOSED" || tk.status === "UNPAID") && balanceOf(tk) > 0;
 
 export function InvoicesPage(): JSX.Element {
   const { t } = useTranslation();
   const locale = storedLocale();
+  const perms = usePermissions();
   const [status, setStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const historyQ = useTicketHistory(status || undefined);
+  const writeOff = useWriteOffTicket();
   const [detail, setDetail] = useState<TicketView | null>(null);
+  const [payFor, setPayFor] = useState<TicketView | null>(null);
 
   // Local calendar day (YYYY-MM-DD) of an ISO timestamp — matches the column the
   // operator reads, not the internal accounting "service day".
@@ -34,6 +50,19 @@ export function InvoicesPage(): JSX.Element {
 
   const dateInput =
     "rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-sm text-stone-700 focus:border-accent focus:outline-none";
+
+  const doWriteOff = (tk: TicketView): void => {
+    if (!window.confirm(t("ticket.markUnpaidConfirm"))) return;
+    writeOff.mutate(
+      { id: tk.id },
+      {
+        onSuccess: () => {
+          toastBus.success(t("ticket.recordedUnpaid"));
+          setDetail(null);
+        },
+      },
+    );
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
@@ -61,7 +90,14 @@ export function InvoicesPage(): JSX.Element {
             />
           </label>
           {from || to ? (
-            <Button variant="ghost" size="sm" onClick={() => { setFrom(""); setTo(""); }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+            >
               {t("invoices.clearDates")}
             </Button>
           ) : null}
@@ -88,7 +124,7 @@ export function InvoicesPage(): JSX.Element {
           <EmptyState icon="▤" title={t("invoices.empty")} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="border-b border-stone-200 text-left text-xs uppercase text-stone-400">
                 <tr>
                   <th className="p-3">{t("invoices.number")}</th>
@@ -110,7 +146,14 @@ export function InvoicesPage(): JSX.Element {
                     <td className="p-3 text-stone-500">
                       {tk.closedAt ? dateTime(tk.closedAt, locale) : "—"}
                     </td>
-                    <td className="p-3 text-right tabular-nums">{yen(tk.totalYen, locale)}</td>
+                    <td className="p-3 text-right tabular-nums">
+                      {yen(tk.totalYen, locale)}
+                      {owes(tk) ? (
+                        <span className="ml-1 font-semibold text-rose-600">
+                          ({t("ticket.balance")} {yen(balanceOf(tk), locale)})
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="p-3">
                       <Badge tone={tone[tk.status]}>{t(`ticket.status.${tk.status}`)}</Badge>
                     </td>
@@ -129,15 +172,36 @@ export function InvoicesPage(): JSX.Element {
           title={t("ticket.title", { n: detail.number })}
           wide
           footer={
-            <Button variant="secondary" onClick={() => printReceipt(detail, locale)}>
-              {t("ticket.print")}
-            </Button>
+            <>
+              <Button variant="ghost" onClick={() => printReceipt(detail, locale)}>
+                {t("ticket.print")}
+              </Button>
+              {perms.canCashier && detail.status === "CLOSED" && balanceOf(detail) > 0 ? (
+                <Button
+                  variant="danger"
+                  loading={writeOff.isPending}
+                  onClick={() => doWriteOff(detail)}
+                >
+                  {t("ticket.markUnpaid")}
+                </Button>
+              ) : null}
+              {perms.canCashier && owes(detail) ? (
+                <Button variant="success" onClick={() => setPayFor(detail)}>
+                  {t("ticket.pay")}
+                </Button>
+              ) : null}
+            </>
           }
         >
           <div className="space-y-3 text-sm">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge tone={tone[detail.status]}>{t(`ticket.status.${detail.status}`)}</Badge>
               <span className="text-stone-400">{dateTime(detail.openedAt, locale)}</span>
+              {owes(detail) ? (
+                <span className="ml-auto rounded-lg bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700">
+                  {t("ticket.balance")} {yen(balanceOf(detail), locale)}
+                </span>
+              ) : null}
             </div>
             <div>
               <div className="mb-1 text-xs uppercase text-stone-400">{t("ticket.guests")}</div>
@@ -201,9 +265,26 @@ export function InvoicesPage(): JSX.Element {
                   ))}
                 </div>
               ) : null}
+              {owes(detail) ? (
+                <div className="flex justify-between font-bold text-rose-700">
+                  <span>{t("ticket.balance")}</span>
+                  <span className="tabular-nums">{yen(balanceOf(detail), locale)}</span>
+                </div>
+              ) : null}
             </div>
           </div>
         </Modal>
+      ) : null}
+
+      {payFor ? (
+        <PayModal
+          ticketId={payFor.id}
+          balanceYen={balanceOf(payFor)}
+          onClose={() => {
+            setPayFor(null);
+            setDetail(null);
+          }}
+        />
       ) : null}
     </div>
   );

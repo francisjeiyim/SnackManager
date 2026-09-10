@@ -19,6 +19,7 @@
     "avgTicket": "Avg ticket",
     "avgStay": "Avg stay",
     "seatsServed": "Seats served",
+    "unpaid": "Unpaid",
     "byMethod": "By payment method",
     "byDay": "By day",
     "date": "Date",
@@ -73,6 +74,7 @@
     "alert": "Near limit",
     "nearBoundary": "Paid time ending soon",
     "atBoundary": "Paid time exceeded",
+    "unpaidSeat": "Awaiting payment",
     "enableSound": "Enable sound",
     "rearrange": "Rearrange",
     "arrangeHint": "Drag seats — this session only",
@@ -136,7 +138,17 @@
     "closeAddSet": "+ Set extension",
     "closeAddHalf": "+ Half-set extension",
     "closeNoAdd": "Bill as-is",
-    "status": { "OPEN": "Open", "CLOSED": "Closed", "PAID": "Paid", "VOID": "Void" },
+    "markUnpaid": "Record unpaid",
+    "markUnpaidConfirm": "Record this ticket as unpaid and free the seat? Payment can still be taken later if the customer comes back.",
+    "unpaidBanner": "Unpaid — {{amount}} outstanding",
+    "recordedUnpaid": "Recorded as unpaid",
+    "status": {
+      "OPEN": "Open",
+      "CLOSED": "Closed",
+      "PAID": "Paid",
+      "UNPAID": "Unpaid",
+      "VOID": "Void"
+    },
     "empty": "Select a ticket"
   },
   "close": {

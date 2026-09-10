@@ -138,6 +138,9 @@ export class HttpRepository implements SnackRepository {
   liveTickets(): Promise<TicketView[]> {
     return this.api.request("GET", "/tickets/live");
   }
+  unpaidTickets(): Promise<TicketView[]> {
+    return this.api.request("GET", "/tickets/unpaid");
+  }
   listTickets(
     params: { status?: string; serviceDay?: string; from?: string; to?: string } = {},
   ): Promise<TicketView[]> {
@@ -163,6 +166,9 @@ export class HttpRepository implements SnackRepository {
   }
   mergeTickets(input: MergeInput): Promise<TicketView> {
     return this.api.request("POST", "/tickets/merge", input);
+  }
+  writeOffTicket(id: string): Promise<TicketView> {
+    return this.api.request("POST", `/tickets/${id}/writeoff`);
   }
   splitTicket(id: string, body: SplitBody): Promise<SplitResult> {
     return this.api.request("POST", `/tickets/${id}/split`, body);

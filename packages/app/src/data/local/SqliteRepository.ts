@@ -653,6 +653,18 @@ export class SqliteRepository implements SnackRepository {
       .map((r) => this.present(db, r.id, settings));
   }
 
+  async unpaidTickets() {
+    const db = await this.ready;
+    const settings = await this.settings();
+    return db
+      .all<{ id: string }>(
+        `SELECT "id" FROM "Ticket"
+         WHERE "status"='CLOSED' AND "totalYen" > "paidYen"
+         ORDER BY "closedAt" DESC LIMIT 500`,
+      )
+      .map((r) => this.present(db, r.id, settings));
+  }
+
   async listTickets(
     params: { status?: string; serviceDay?: string; from?: string; to?: string } = {},
   ) {
@@ -825,6 +837,31 @@ export class SqliteRepository implements SnackRepository {
     });
     const view = this.present(db, id, settings);
     this.emit("guest.closed", view);
+    this.emit("ticket.updated", view);
+    return view;
+  }
+
+  async writeOffTicket(id: string) {
+    const db = await this.ready;
+    const settings = await this.settings();
+    db.tx(() => {
+      const ticket = db.get<{ status: string; totalYen: number; paidYen: number }>(
+        `SELECT "status","totalYen","paidYen" FROM "Ticket" WHERE "id"=?`,
+        [id],
+      );
+      if (!ticket) throw new BillingError("ticket not found", "NOT_FOUND");
+      if (ticket.status !== "CLOSED") {
+        throw new BillingError("only a CLOSED ticket can be written off", "TICKET_NOT_CLOSED");
+      }
+      if (ticket.totalYen - ticket.paidYen <= 0) {
+        throw new BillingError("ticket is already settled", "TICKET_SETTLED");
+      }
+      db.run(`UPDATE "Ticket" SET "status"='UNPAID',"updatedAt"=? WHERE "id"=?`, [nowIso(), id]);
+      this.audit(db, "TICKET_WRITEOFF", "ticket", id, {
+        outstandingYen: ticket.totalYen - ticket.paidYen,
+      });
+    });
+    const view = this.present(db, id, settings);
     this.emit("ticket.updated", view);
     return view;
   }

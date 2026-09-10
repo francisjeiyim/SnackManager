@@ -58,6 +58,8 @@ export const TicketStatus = {
   OPEN: "OPEN",
   CLOSED: "CLOSED",
   PAID: "PAID",
+  /** Closed, the customer left without settling — logged as a loss, not billed. */
+  UNPAID: "UNPAID",
   VOID: "VOID",
 } as const;
 export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus];
@@ -123,6 +125,7 @@ export const AuditAction = {
   TICKET_MERGE: "TICKET_MERGE",
   TICKET_SPLIT: "TICKET_SPLIT",
   TICKET_VOID: "TICKET_VOID",
+  TICKET_WRITEOFF: "TICKET_WRITEOFF",
   PAYMENT: "PAYMENT",
   SEAT_CREATE: "SEAT_CREATE",
   LAYOUT_EDIT: "LAYOUT_EDIT",

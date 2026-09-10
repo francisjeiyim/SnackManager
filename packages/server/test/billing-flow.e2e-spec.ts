@@ -265,6 +265,54 @@ describe("SnackManager billing flow (e2e)", () => {
     ).expect(409);
   });
 
+  it("keeps a closed-unpaid ticket recallable, then lets it be paid or written off", async () => {
+    const { seats } = ctx.seed;
+
+    // ticket A — closed, never paid → shows up in /tickets/unpaid, gets paid later
+    const a = await seatIn([seats[0].id]);
+    await close(a.tickets[0].id, at(10));
+    // ticket B — closed, never paid → written off
+    const b = await seatIn([seats[1].id]);
+    await close(b.tickets[0].id, at(10));
+
+    let unpaid = await auth(request(app.getHttpServer()).get("/api/tickets/unpaid")).expect(200);
+    const ids = unpaid.body.map((tk: { id: string }) => tk.id).sort();
+    expect(ids).toEqual([a.tickets[0].id, b.tickets[0].id].sort());
+    // seats are already free even though payment is pending
+    const active = await auth(request(app.getHttpServer()).get("/api/guests/active")).expect(200);
+    expect(active.body).toHaveLength(0);
+
+    // pay A in full → leaves the unpaid list as PAID
+    const aTotal = unpaid.body.find((tk: { id: string }) => tk.id === a.tickets[0].id).totalYen;
+    const paidA = await auth(
+      request(app.getHttpServer())
+        .post(`/api/tickets/${a.tickets[0].id}/payments`)
+        .send({ amountYen: aTotal, method: "CASH" }),
+    ).expect(201);
+    expect(paidA.body.status).toBe("PAID");
+
+    // write B off → status UNPAID, leaves the unpaid list
+    const off = await auth(
+      request(app.getHttpServer()).post(`/api/tickets/${b.tickets[0].id}/writeoff`),
+    ).expect(201);
+    expect(off.body.status).toBe("UNPAID");
+
+    unpaid = await auth(request(app.getHttpServer()).get("/api/tickets/unpaid")).expect(200);
+    expect(unpaid.body).toHaveLength(0);
+
+    // a written-off ticket cannot be written off again, but can still be paid
+    await auth(
+      request(app.getHttpServer()).post(`/api/tickets/${b.tickets[0].id}/writeoff`),
+    ).expect(409);
+    const bTotal = off.body.totalYen;
+    const paidB = await auth(
+      request(app.getHttpServer())
+        .post(`/api/tickets/${b.tickets[0].id}/payments`)
+        .send({ amountYen: bTotal, method: "CASH" }),
+    ).expect(201);
+    expect(paidB.body.status).toBe("PAID");
+  });
+
   it("splits a ticket by guest groups into new tickets", async () => {
     const { seats, products } = ctx.seed;
     const { tickets } = await seatIn([seats[0].id, seats[1].id, seats[2].id]);

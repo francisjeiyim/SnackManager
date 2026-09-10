@@ -120,6 +120,8 @@ export interface SnackRepository {
   unassignGuest(guestId: string): Promise<Guest>;
 
   liveTickets(): Promise<TicketView[]>;
+  /** Closed tickets still owing money (customer left without paying). */
+  unpaidTickets(): Promise<TicketView[]>;
   listTickets(params?: {
     status?: string;
     serviceDay?: string;
@@ -135,6 +137,8 @@ export interface SnackRepository {
     opts?: { closedAt?: string; overdueExtension?: "SET" | "HALF" | "NONE" },
   ): Promise<TicketView>;
   mergeTickets(input: MergeInput): Promise<TicketView>;
+  /** Record a closed-unpaid ticket as a loss so it drops off the "to collect" list. */
+  writeOffTicket(id: string): Promise<TicketView>;
   splitTicket(id: string, body: SplitBody): Promise<SplitResult>;
   listPayments(ticketId: string): Promise<Payment[]>;
   takePayment(ticketId: string, body: Omit<PaymentInput, "ticketId">): Promise<PaymentResult>;

@@ -53,6 +53,11 @@ export class TicketsController {
     return this.tickets.listLive();
   }
 
+  @Get("unpaid")
+  unpaid() {
+    return this.tickets.listUnpaid();
+  }
+
   @Get()
   list(
     @Query("status") status?: string,
@@ -106,6 +111,12 @@ export class TicketsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.tickets.close(id, dto.closedAt, user?.id, dto.overdueExtension ?? "NONE");
+  }
+
+  @Roles(UserRole.CASHIER)
+  @Post(":id/writeoff")
+  writeOff(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.tickets.writeOff(id, user?.id);
   }
 
   @Roles(UserRole.CASHIER)

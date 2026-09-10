@@ -26,6 +26,7 @@ import {
   useUnassignGuest,
   useUndoExtension,
   useVoidItem,
+  useWriteOffTicket,
 } from "../../data/queries";
 import type { TicketView } from "../../data/repository";
 import { PosGridModal } from "./PosGridModal";
@@ -34,7 +35,13 @@ import { MergeModal } from "./MergeModal";
 import { SplitModal } from "./SplitModal";
 import { MoveGuestModal } from "./MoveGuestModal";
 
-const statusTone = { OPEN: "emerald", CLOSED: "amber", PAID: "sky", VOID: "rose" } as const;
+const statusTone = {
+  OPEN: "emerald",
+  CLOSED: "amber",
+  PAID: "sky",
+  UNPAID: "rose",
+  VOID: "stone",
+} as const;
 
 export function TicketPanel({
   ticketId,
@@ -57,6 +64,7 @@ export function TicketPanel({
   const unassign = useUnassignGuest();
   const extendGuest = useExtendGuest();
   const undoExtension = useUndoExtension();
+  const writeOff = useWriteOffTicket();
   const presentStaff = useAssignableStaff().data ?? [];
 
   const [modal, setModal] = useState<null | "pos" | "pay" | "merge" | "split">(null);
@@ -81,6 +89,20 @@ export function TicketPanel({
   const settings = settingsQ.data as BillingSettings;
   const leadMinutes = settingsQ.data.hourWarningMinutes ?? 0;
   const isOpen = ticket.status === "OPEN";
+  const isUnpaid = ticket.status === "CLOSED" || ticket.status === "UNPAID";
+
+  const doWriteOff = (): void => {
+    if (!window.confirm(t("ticket.markUnpaidConfirm"))) return;
+    writeOff.mutate(
+      { id: ticket.id },
+      {
+        onSuccess: () => {
+          toastBus.success(t("ticket.recordedUnpaid"));
+          onClose();
+        },
+      },
+    );
+  };
 
   const totals = isOpen
     ? computeTicketTotals({ ticket, guests: ticket.guests, items: ticket.items }, settings, now)
@@ -335,6 +357,17 @@ export function TicketPanel({
           </ul>
         </section>
 
+        {!isOpen && balance > 0 ? (
+          <div className="flex items-center justify-between rounded-xl bg-rose-100 px-3 py-2 text-sm font-bold text-rose-700">
+            <span>
+              {ticket.status === "UNPAID"
+                ? t("ticket.recordedUnpaid")
+                : t("ticket.unpaidBanner", { amount: yen(balance, locale) })}
+            </span>
+            <span className="tabular-nums">{yen(balance, locale)}</span>
+          </div>
+        ) : null}
+
         {/* totals */}
         <section className="rounded-xl bg-accent-50 p-3 text-sm">
           <Row label={t("ticket.time")} value={yen(totals.timeYen, locale)} />
@@ -344,7 +377,7 @@ export function TicketPanel({
           ) : null}
           <div className="my-1 border-t border-accent-100" />
           <Row label={t("ticket.total")} value={yen(totals.totalYen, locale)} strong />
-          {ticket.paidYen > 0 ? (
+          {ticket.paidYen > 0 || (!isOpen && balance > 0) ? (
             <>
               <Row label={t("ticket.paid")} value={yen(ticket.paidYen, locale)} />
               <Row label={t("ticket.balance")} value={yen(balance, locale)} strong />
@@ -392,25 +425,41 @@ export function TicketPanel({
             )}
           </div>
         ) : null}
-        {ticket.status === "CLOSED" ? (
+        {isUnpaid ? (
           <div className="flex flex-wrap gap-2">
             <Button variant="ghost" size="sm" onClick={() => printReceipt(ticket, locale)}>
               {t("ticket.print")}
             </Button>
-            {perms.canCashier ? (
-              <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="min-w-[88px] flex-1"
-                  onClick={() => setModal("split")}
-                >
-                  {t("ticket.split")}
-                </Button>
-                <Button size="sm" className="min-w-[88px] flex-1" onClick={() => setModal("pay")}>
-                  {t("ticket.pay")}
-                </Button>
-              </>
+            {perms.canCashier && ticket.status === "CLOSED" ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="min-w-[88px] flex-1"
+                onClick={() => setModal("split")}
+              >
+                {t("ticket.split")}
+              </Button>
+            ) : null}
+            {perms.canCashier && ticket.status === "CLOSED" && balance > 0 ? (
+              <Button
+                variant="danger"
+                size="sm"
+                className="min-w-[88px] flex-1"
+                loading={writeOff.isPending}
+                onClick={doWriteOff}
+              >
+                {t("ticket.markUnpaid")}
+              </Button>
+            ) : null}
+            {perms.canCashier && balance > 0 ? (
+              <Button
+                variant="success"
+                size="sm"
+                className="min-w-[88px] flex-1"
+                onClick={() => setModal("pay")}
+              >
+                {t("ticket.pay")}
+              </Button>
             ) : null}
           </div>
         ) : null}

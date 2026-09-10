@@ -31,6 +31,7 @@ export const keys = {
   products: (all: boolean) => ["products", { all }] as const,
   activeGuests: ["guests", "active"] as const,
   liveTickets: ["tickets", "live"] as const,
+  unpaidTickets: ["tickets", "unpaid"] as const,
   ticketHistory: (status?: string) => ["tickets", "history", status ?? "all"] as const,
   ticket: (id: string) => ["tickets", "one", id] as const,
   users: ["users"] as const,
@@ -76,6 +77,15 @@ export function useLiveTickets() {
   return useQuery({
     queryKey: keys.liveTickets,
     queryFn: () => repo.liveTickets(),
+    refetchInterval: LIVE_MS,
+  });
+}
+
+export function useUnpaidTickets() {
+  const repo = useRepository();
+  return useQuery({
+    queryKey: keys.unpaidTickets,
+    queryFn: () => repo.unpaidTickets(),
     refetchInterval: LIVE_MS,
   });
 }
@@ -221,6 +231,15 @@ export function useMergeTickets() {
   const invalidate = useInvalidateService();
   return useMutation({
     mutationFn: (input: MergeInput) => repo.mergeTickets(input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useWriteOffTicket() {
+  const repo = useRepository();
+  const invalidate = useInvalidateService();
+  return useMutation({
+    mutationFn: (vars: { id: string }) => repo.writeOffTicket(vars.id),
     onSuccess: invalidate,
   });
 }
