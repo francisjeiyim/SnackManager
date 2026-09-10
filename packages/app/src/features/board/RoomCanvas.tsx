@@ -15,8 +15,8 @@ type SeatState = "free" | "occupied" | "overtime" | "near" | "alert" | "unpaid";
 
 const stateStyles: Record<SeatState, { box: string; dot: string }> = {
   free: {
-    box: "border-dashed border-stone-300 bg-white/60 text-stone-400",
-    dot: "bg-stone-300",
+    box: "border-dashed border-stone-400 bg-white text-stone-600 shadow-sm",
+    dot: "bg-stone-400",
   },
   occupied: {
     box: "border-emerald-500 bg-emerald-100 text-emerald-800 shadow-sm",
@@ -257,7 +257,14 @@ export function RoomCanvas({
                   💰
                 </span>
               ) : null}
-              <span className="px-1 leading-tight">{seat.label}</span>
+              <span
+                className={cn(
+                  "px-1 leading-tight",
+                  state === "free" && "text-lg font-extrabold text-stone-700",
+                )}
+              >
+                {seat.label}
+              </span>
               {occupied ? (
                 <>
                   {guests.length > 1 ? (
@@ -274,7 +281,9 @@ export function RoomCanvas({
                   {t("board.unpaidSeat")}
                 </span>
               ) : (
-                <span className="text-[10px] font-medium">{t("board.free")}</span>
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
+                  {t("board.free")}
+                </span>
               )}
             </button>
           </div>

@@ -59,21 +59,33 @@ export function LayoutEditorPage(): JSX.Element {
 
   const addSeat = async (kind: SeatKind): Promise<void> => {
     if (!room) return;
-    const n = drafts.length + 1;
-    const created = await m.createSeat.mutateAsync({
-      roomId: room.id,
-      label: `${room.name.startsWith("テラス") ? "P" : "T"}${n}`,
-      x: 40,
-      y: 40,
-      w: 100,
-      h: 100,
-      rotationDeg: 0,
-      shape: "RECT",
-      kind,
-      isActive: true,
-    });
-    setDirty(false);
-    setSelectedId(created.id);
+    // Smallest unused positive integer as the label — never collides with an
+    // existing seat (deleted seats free up their number).
+    const used = new Set(
+      drafts.map((s) => parseInt(s.label, 10)).filter((v) => Number.isInteger(v)),
+    );
+    let n = 1;
+    while (used.has(n)) n++;
+    try {
+      const created = await m.createSeat.mutateAsync({
+        roomId: room.id,
+        label: String(n),
+        x: 40 + (drafts.length % 6) * 16,
+        y: 40 + (drafts.length % 6) * 16,
+        w: 100,
+        h: 100,
+        rotationDeg: 0,
+        shape: "RECT",
+        kind,
+        isActive: true,
+      });
+      // Show it right away and keep any unsaved edits (the rooms refetch will
+      // re-sync when the layout is not dirty).
+      setDrafts((cur) => (cur.some((s) => s.id === created.id) ? cur : [...cur, { ...created }]));
+      setSelectedId(created.id);
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : String(err));
+    }
   };
 
   const save = async (): Promise<void> => {

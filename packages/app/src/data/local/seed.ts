@@ -20,16 +20,8 @@ export function seedLocalDb(db: LocalDb): void {
   );
 
   const rooms = [
-    {
-      name: "メインホール Main Hall",
-      width: 1200,
-      height: 800,
-      sort: 0,
-      prefix: "T",
-      rows: 2,
-      cols: 4,
-    },
-    { name: "テラス Terrace", width: 900, height: 600, sort: 1, prefix: "P", rows: 1, cols: 4 },
+    { name: "メインホール Main Hall", width: 1200, height: 800, sort: 0, rows: 2, cols: 4 },
+    { name: "テラス Terrace", width: 900, height: 600, sort: 1, rows: 1, cols: 4 },
   ];
   for (const room of rooms) {
     const roomId = uuid();
@@ -46,7 +38,7 @@ export function seedLocalDb(db: LocalDb): void {
           [
             uuid(),
             roomId,
-            `${room.prefix}${n}`,
+            String(n),
             120 + c * 220,
             120 + r * 240,
             c % 2 === 0 ? "RECT" : "ROUND",

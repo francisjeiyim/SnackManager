@@ -6,6 +6,14 @@ import { cn } from "../../lib/cn";
 import { useSeatIn } from "../../data/queries";
 import type { RoomWithSeats } from "../../data/repository";
 
+/** Natural order: "2" before "10", digits before text. */
+function byLabel(a: string, b: string): number {
+  const na = parseInt(a, 10);
+  const nb = parseInt(b, 10);
+  if (Number.isInteger(na) && Number.isInteger(nb) && na !== nb) return na - nb;
+  return a.localeCompare(b, undefined, { numeric: true });
+}
+
 interface Props {
   room: RoomWithSeats;
   occupiedSeatIds: Set<string>;
@@ -22,7 +30,10 @@ export function SeatInDialog({
   const { t } = useTranslation();
   const seatIn = useSeatIn();
   const freeSeats = useMemo(
-    () => room.seats.filter((s) => s.isActive && !occupiedSeatIds.has(s.id)),
+    () =>
+      room.seats
+        .filter((s) => s.isActive && !occupiedSeatIds.has(s.id))
+        .sort((a, b) => byLabel(a.label, b.label)),
     [room.seats, occupiedSeatIds],
   );
   const [selected, setSelected] = useState<string[]>(
@@ -95,19 +106,24 @@ export function SeatInDialog({
       {selected.length > 0 ? (
         <div className="space-y-2">
           <span className="text-xs font-medium text-stone-500">{t("seatIn.names")}</span>
-          {selected.map((id, i) => {
-            const seat = room.seats.find((s) => s.id === id);
-            return (
-              <div key={id} className="flex items-center gap-2">
-                <span className="w-12 shrink-0 text-xs text-stone-400">{seat?.label}</span>
+          {[...selected]
+            .map((id) => room.seats.find((s) => s.id === id))
+            .filter((s): s is (typeof room.seats)[number] => s != null)
+            .sort((a, b) => byLabel(a.label, b.label))
+            .map((seat, i) => (
+              <div key={seat.id} className="flex items-center gap-2">
+                <span className="w-12 shrink-0 text-xs font-semibold text-stone-500">
+                  {seat.label}
+                </span>
                 <Input
                   placeholder={`${t("seatIn.guest")} ${i + 1}`}
-                  value={names[id] ?? ""}
-                  onChange={(e) => setNames((n) => ({ ...n, [id]: e.target.value }))}
+                  value={names[seat.id] ?? ""}
+                  onChange={(e) =>
+                    setNames((n) => ({ ...n, [seat.id]: e.target.value }))
+                  }
                 />
               </div>
-            );
-          })}
+            ))}
         </div>
       ) : null}
 

@@ -147,7 +147,7 @@ export function SeatQuickMenu({
             disabled={ticketQ.isLoading}
             onClick={doSettle}
           >
-            {t("board.quickSettle")} {balance > 0 ? yen(balance, locale) : ""}
+            {t("board.quickSettle")}
           </Button>
         ) : null}
         {ticketId ? (

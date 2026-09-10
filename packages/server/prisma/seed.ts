@@ -46,6 +46,22 @@ async function main(): Promise<void> {
   }
 
   // --- rooms & seats -------------------------------------------
+
+  // Seats are named with plain numbers now. Strip any legacy prefix (T1 -> 1,
+  // P3 -> 3) from existing rows, skipping any that would collide within a room.
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Seat" s
+    SET "label" = regexp_replace(s."label", '[^0-9]', '', 'g')
+    WHERE s."label" ~ '[^0-9]'
+      AND regexp_replace(s."label", '[^0-9]', '', 'g') <> ''
+      AND NOT EXISTS (
+        SELECT 1 FROM "Seat" x
+        WHERE x."roomId" = s."roomId"
+          AND x."id" <> s."id"
+          AND x."label" = regexp_replace(s."label", '[^0-9]', '', 'g')
+      )
+  `);
+
   const roomSpecs = [
     { name: "メインホール Main Hall", width: 1200, height: 800, sortOrder: 0, rows: 2, cols: 4 },
     { name: "テラス Terrace", width: 900, height: 600, sortOrder: 1, rows: 1, cols: 4 },
@@ -67,7 +83,7 @@ async function main(): Promise<void> {
     let n = 1;
     for (let r = 0; r < spec.rows; r++) {
       for (let c = 0; c < spec.cols; c++) {
-        const label = `${spec.sortOrder === 0 ? "T" : "P"}${n}`;
+        const label = String(n);
         await prisma.seat.upsert({
           where: { roomId_label: { roomId: room.id, label } },
           create: {
